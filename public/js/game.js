@@ -5,6 +5,9 @@ let authToken = '';
 let userAvatar = '';
 let isSquadHost = true;
 
+// Prevents duplicate rendering and event listener stacking
+let gameInitialized = false;
+
 function showScreen(screenId) {
   document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
   document.getElementById(screenId).style.display = 'flex';
@@ -329,6 +332,12 @@ async function sendFriendRequest(targetUsername) {
       body: JSON.stringify({ from: playerName, to: targetUsername })
     });
     const data = await res.json();
+
+    if (res.ok) {
+      // Emit socket event to notify target player in real time
+      socket.emit('send_friend_request', { from: playerName, to: targetUsername });
+    }
+
     alert(data.message);
   } catch (err) {
     alert('Error sending request');
@@ -433,7 +442,6 @@ function inviteFriendToSquad(friendUsername) {
 }
 
 socket.on('squad_updated', (data) => {
-  // Update Host / Player 1 slot
   const slot1Pfp = document.getElementById('slot1-pfp');
   const slot1Name = document.getElementById('slot1-name');
   
@@ -446,30 +454,30 @@ socket.on('squad_updated', (data) => {
     }
   }
 
-  // Update Guest / Player 2 slot
   const slot2Pfp = document.getElementById('slot2-pfp');
   const slot2Name = document.getElementById('slot2-name');
 
-  if (data.guest) {
-    slot2Name.innerText = data.guest.username;
-    if (data.guest.avatar) {
-      slot2Pfp.innerHTML = `<img src="${data.guest.avatar}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;" />`;
+  if (slot2Pfp && slot2Name) {
+    if (data.guest) {
+      slot2Name.innerText = data.guest.username;
+      if (data.guest.avatar) {
+        slot2Pfp.innerHTML = `<img src="${data.guest.avatar}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;" />`;
+      } else {
+        slot2Pfp.innerText = data.guest.username.charAt(0).toUpperCase();
+      }
     } else {
-      slot2Pfp.innerText = data.guest.username.charAt(0).toUpperCase();
+      slot2Name.innerText = 'EMPTY SLOT';
+      slot2Pfp.innerHTML = '<span style="font-size: 32px; color: #45a29e;">+</span>';
     }
-  } else {
-    slot2Name.innerText = 'P2 (EMPTY)';
-    slot2Pfp.innerHTML = '<span style="font-size:24px; color:#555;">+</span>';
   }
 
-  // Update Host controls vs Guest notice
   isSquadHost = (data.host && data.host.username === playerName);
   const startBtn = document.getElementById('start-battle-btn');
   if (startBtn) {
     if (isSquadHost) {
-      startBtn.innerText = 'SELECT CHARACTER';
+      startBtn.innerText = 'START GAME';
       startBtn.disabled = false;
-      startBtn.onclick = () => goToCharScreen();
+      startBtn.onclick = () => hostStartGame(); // FIX: Calls hostStartGame to emit socket event once
     } else {
       startBtn.innerText = 'WAITING FOR HOST...';
       startBtn.disabled = true;
@@ -482,10 +490,20 @@ socket.on('game_started_by_host', () => {
   goToCharScreen();
 });
 
-function goToCharScreen() {
+// Real-time listener for incoming friend requests
+socket.on('friend_request_received', (data) => {
+  // Automatically updates the badge and populates the requests tab
+  loadFriendRequests();
+});
+
+// FIX: Decoupled emitting the request from changing screens to break the infinite socket loop
+function hostStartGame() {
   if (isSquadHost) {
     socket.emit('start_game_request');
   }
+}
+
+function goToCharScreen() {
   showScreen('char-screen');
 }
 
@@ -502,7 +520,19 @@ function lockCharacterAndStart() {
   document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
   document.getElementById('ui-layer').style.display = 'block';
   document.getElementById('hud-role').innerText = `ROLE: ${selectedCharacter.toUpperCase()}`;
-  initGame();
+  
+  if (!gameInitialized) {
+    initGame();
+    gameInitialized = true;
+  }
+}
+
+function leaveGame() {
+  document.getElementById('ui-layer').style.display = 'none';
+  showScreen('lobby-screen');
+  if (document.pointerLockElement) {
+    document.exitPointerLock();
+  }
 }
 
 // --- THREE.JS ENGINE ---

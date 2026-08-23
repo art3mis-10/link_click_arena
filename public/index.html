@@ -128,7 +128,8 @@
     </div>
   
     <button class="btn bottom-left secondary-btn" onclick="showScreen('lobby-screen')">BACK TO LOBBY</button>
-    <button class="btn bottom-right" onclick="goToCharScreen()">START GAME</button>
+    <!-- CHANGED: Calls hostStartGame() instead of goToCharScreen() to prevent the socket loop -->
+    <button class="btn bottom-right" onclick="hostStartGame()">START GAME</button>
   </div>
 
   <!-- 6. CHARACTER SELECTION SCREEN -->
@@ -161,9 +162,9 @@
   <div id="ui-layer" style="display: none;">
     <div id="hud-role">ROLE: UNASSIGNED</div>
     <div id="instructions">WASD: Move | SHIFT: Lock Mouse to Turn Camera</div>
+    <button class="btn action-btn-danger" onclick="leaveGame()" style="margin-top: 15px;">ABORT MISSION</button>
   </div>
   <canvas id="game-canvas"></canvas>
-
   <script src="/js/game.js"></script>
 </body>
 </html>

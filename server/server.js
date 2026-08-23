@@ -154,6 +154,13 @@ io.on('connection', (socket) => {
     gameManager.removePlayer(socket.id);
     io.emit('player_left', socket.id);
   });
+
+  socket.on('send_friend_request', (data) => {
+    const targetSocketId = userSockets[data.to]; // Map target's username to their socket ID
+    if (targetSocketId) {
+      io.to(targetSocketId).emit('friend_request_received', { from: data.from });
+    }
+  });
 });
 
 // --- PROFILE & FRIENDS ENDPOINTS ---
