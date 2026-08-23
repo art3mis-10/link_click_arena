@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Link Click 2.5D Arena</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="/socket.io/socket.io.js"></script>
+</head>
+<body>
+
+  <!-- 1. LOGIN SCREEN -->
+  <div id="login-screen" class="screen">
+    <div class="login-box">
+      <div class="login-title">LINK CLICK</div>
+      <input type="text" id="username" class="input-field" placeholder="Username..." />
+      <input type="password" id="password" class="input-field" placeholder="Password..." />
+      
+      <div style="display: flex; gap: 10px; width: 100%;">
+        <button class="btn" style="flex: 1;" onclick="handleLogin()">LOGIN</button>
+        <button class="btn secondary-btn" style="flex: 1;" onclick="handleRegister()">REGISTER</button>
+      </div>
+      <p id="auth-error" style="color: #ff4d4d; font-size: 14px; text-align: center; display: none;"></p>
+    </div>
+  </div>
+
+  <!-- 2. PURE MAIN LOBBY -->
+  <div id="lobby-screen" class="screen" style="display: none;">
+    <div class="lobby-header">
+      <h1>TIME AGENT LOBBY</h1>
+    </div>
+
+    <!-- TOP RIGHT CONTAINER -->
+    <div class="top-right-bar-container">
+      <div class="top-right-bar" onclick="openProfileScreen()">
+        <div id="top-pfp" class="round-pfp">?</div>
+        <span id="top-username" class="top-username-text">Player</span>
+      </div>
+      <button class="friends-btn-shortcut" onclick="openFriendsScreen()">👥 FRIENDS</button>
+    </div>
+
+    <button class="btn bottom-right" onclick="goToTeamScreen()">READY FOR BATTLE</button>
+  </div>
+
+  <!-- 3. PROFILE SCREEN -->
+  <div id="profile-screen" class="screen" style="display: none;">
+    <div class="profile-card">
+      <button class="close-btn" onclick="showScreen('lobby-screen')">✕</button>
+      
+      <div class="profile-header">
+        <div class="pfp-upload-wrapper" id="pfp-wrapper" onclick="document.getElementById('pfp-file-input').click()">
+          <div id="profile-page-pfp" class="round-pfp large-pfp">?</div>
+          <div class="pfp-overlay" id="pfp-overlay"><span>Upload</span></div>
+        </div>
+        <input type="file" id="pfp-file-input" accept="image/*" style="display: none;" onchange="handlePfpUpload(event)" />
+        
+        <div class="profile-info">
+          <h2 id="profile-page-username">Player Name</h2>
+          <span class="status-badge" id="profile-status-badge">ONLINE</span>
+        </div>
+      </div>
+
+      <div class="profile-stats">
+        <div class="stat-box">
+          <span class="stat-num" id="profile-stat-matches">0</span>
+          <span class="stat-label">Matches Played</span>
+        </div>
+        <div class="stat-box">
+          <span class="stat-num" id="profile-stat-friends">0</span>
+          <span class="stat-label">Friends</span>
+        </div>
+      </div>
+
+      <div id="profile-action-container"></div>
+    </div>
+  </div>
+
+  <!-- 4. FRIENDS SCREEN -->
+  <div id="friends-screen" class="screen" style="display: none;">
+    <div class="modal-card friends-card">
+      <button class="close-btn" onclick="showScreen('lobby-screen')">✕</button>
+      <h2>FRIENDS NETWORK</h2>
+      
+      <div class="tab-header">
+        <button class="tab-btn active" id="tab-btn-list" onclick="switchFriendsTab('list')">MY FRIENDS</button>
+        <button class="tab-btn" id="tab-btn-search" onclick="switchFriendsTab('search')">FIND FRIENDS</button>
+        <button class="tab-btn" id="tab-btn-requests" onclick="switchFriendsTab('requests')">REQUESTS <span id="req-count-badge" class="badge" style="display:none;">0</span></button>
+      </div>
+
+      <!-- TAB 1: FRIENDS LIST -->
+      <div id="tab-content-list" class="tab-content active">
+        <div id="friends-list" class="scroll-list"></div>
+      </div>
+
+      <!-- TAB 2: FIND FRIENDS -->
+      <div id="tab-content-search" class="tab-content">
+        <div class="search-box">
+          <input type="text" id="friend-search-input" class="input-field" placeholder="Search username..." onkeyup="if(event.key==='Enter') searchUsers()" />
+          <button class="btn" style="padding: 10px 20px;" onclick="searchUsers()">SEARCH</button>
+        </div>
+        <div id="search-results-list" class="scroll-list"></div>
+      </div>
+
+      <!-- TAB 3: REQUESTS -->
+      <div id="tab-content-requests" class="tab-content">
+        <div id="requests-list" class="scroll-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. TEAM / PARTY SCREEN -->
+  <div id="team-screen" class="screen" style="display: none;">
+    <div class="lobby-header">
+      <h1>SQUAD LOBBY</h1>
+    </div>
+  
+    <div class="team-container">
+      <div class="team-slot filled">
+        <div class="player-avatar" id="slot1-avatar">P1</div>
+        <h3 id="slot1-name" style="color: #66fcf1;">Agent_01</h3>
+        <p style="font-size: 12px; color: #888;">PARTY LEADER</p>
+      </div>
+      <div class="team-slot">
+        <div style="font-size: 40px; color: #45a29e;">+</div>
+        <h3>EMPTY SLOT</h3>
+        <p style="font-size: 12px; text-align: center;">Invite Friend<br>(Coming Soon)</p>
+      </div>
+    </div>
+  
+    <button class="btn bottom-left secondary-btn" onclick="showScreen('lobby-screen')">BACK TO LOBBY</button>
+    <button class="btn bottom-right" onclick="goToCharScreen()">START GAME</button>
+  </div>
+
+  <!-- 6. CHARACTER SELECTION SCREEN -->
+  <div id="char-screen" class="screen" style="display: none;">
+    <div class="lobby-header" style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+      <h1>SELECT YOUR AGENT</h1>
+      <div class="team-preview">
+        <span>Team Picks:</span>
+        <strong id="p1-pick-display" style="color: #66fcf1;">Cheng Xiaoshi</strong>
+        <span style="color: #666;">|</span>
+        <span style="color: #666;">P2: Waiting...</span>
+      </div>
+    </div>
+    <div class="char-container">
+      <div class="card active" id="card-cheng" onclick="selectCharacter('cheng_xiaoshi')">
+        <h3>CHENG XIAOSHI</h3>
+        <p><strong>ROLE: COMBATER</strong></p>
+        <p>Enters photo dimensions directly. High mobility combat specialist.</p>
+      </div>
+      <div class="card" id="card-lu" onclick="selectCharacter('lu_guang')">
+        <h3>LU GUANG</h3>
+        <p><strong>ROLE: OBSERVER</strong></p>
+        <p>Tracks target trajectories across the 12-hour window. Strategic vision.</p>
+      </div>
+    </div>
+    <button class="btn bottom-right" onclick="lockCharacterAndStart()">LOCK IN & COMBAT</button>
+  </div>
+
+  <!-- 7. GAME HUD & CANVAS -->
+  <div id="ui-layer" style="display: none;">
+    <div id="hud-role">ROLE: UNASSIGNED</div>
+    <div id="instructions">WASD: Move | SHIFT: Lock Mouse to Turn Camera</div>
+  </div>
+  <canvas id="game-canvas"></canvas>
+
+  <script src="/js/game.js"></script>
+</body>
+</html>
