@@ -1,5 +1,4 @@
 const path = require('path');
-// Automatically locates the .env file in the root folder
 require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
 const express = require('express');
@@ -13,15 +12,14 @@ const http = require('http').createServer(app);
 const io = require('socket.io')(http);
 const gameManager = new GameManager();
 
-// Keep track of online users via sockets/login
-const onlineUsers = new Set();
+// Active tracking maps
+const onlineUsers = new Map(); // username -> socketId
+const activeSquads = new Map(); // hostUsername -> { host, guest, ready }
 
-// Essential Middleware (Must be before routes)
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(express.static('public'));
 
-// Connect to MongoDB Atlas
 mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log('MongoDB Atlas Connected Successfully!'))
   .catch(err => console.error('Database connection error:', err));
@@ -29,36 +27,20 @@ mongoose.connect(process.env.MONGO_URI)
 // --- REGISTER ROUTE ---
 app.post('/api/register', async (req, res) => {
   const { username, password } = req.body;
-  
   try {
-    if (!username || !password) {
-      return res.status(400).json({ message: 'Username and password required' });
-    }
-
-    if (username.length < 3) {
-      return res.status(400).json({ message: 'Username must be at least 3 characters' });
-    }
-
-    if (password.length < 6) {
-      return res.status(400).json({ message: 'Password must be at least 6 characters' });
-    }
+    if (!username || !password) return res.status(400).json({ message: 'Username and password required' });
+    if (username.length < 3) return res.status(400).json({ message: 'Username must be at least 3 characters' });
+    if (password.length < 6) return res.status(400).json({ message: 'Password must be at least 6 characters' });
 
     const userExists = await User.findOne({ username });
-    if (userExists) {
-      return res.status(400).json({ message: 'Username already taken' });
-    }
+    if (userExists) return res.status(400).json({ message: 'Username already taken' });
 
     const user = new User({ username, password });
     await user.save();
 
-    const token = jwt.sign(
-      { id: user._id, username: user.username },
-      process.env.JWT_SECRET || 'fallback_secret'
-    );
-
+    const token = jwt.sign({ id: user._id, username: user.username }, process.env.JWT_SECRET || 'fallback_secret');
     return res.json({ token, username: user.username, avatar: user.avatar || '' });
   } catch (err) {
-    console.error('Registration Error:', err);
     return res.status(500).json({ message: err.message || 'Server error during registration' });
   }
 });
@@ -66,38 +48,89 @@ app.post('/api/register', async (req, res) => {
 // --- LOGIN ROUTE ---
 app.post('/api/login', async (req, res) => {
   const { username, password } = req.body;
-  
   try {
-    if (!username || !password) {
-      return res.status(400).json({ message: 'Username and password required' });
-    }
+    if (!username || !password) return res.status(400).json({ message: 'Username and password required' });
 
     const user = await User.findOne({ username });
     if (!user || !(await user.matchPassword(password))) {
       return res.status(400).json({ message: 'Invalid credentials' });
     }
 
-    const token = jwt.sign(
-      { id: user._id, username: user.username },
-      process.env.JWT_SECRET || 'fallback_secret'
-    );
-
+    const token = jwt.sign({ id: user._id, username: user.username }, process.env.JWT_SECRET || 'fallback_secret');
     return res.json({ token, username: user.username, avatar: user.avatar || '' });
   } catch (err) {
-    console.error('Login Error:', err);
     return res.status(500).json({ message: 'Server error during login' });
   }
 });
 
 // --- REAL-TIME SOCKET.IO HANDLERS ---
 io.on('connection', (socket) => {
-  console.log(`Player connected: ${socket.id}`);
+  let authenticatedUser = null;
 
   socket.on('player_login', (data) => {
     if (data && data.name) {
-      onlineUsers.add(data.name);
+      authenticatedUser = data.name;
+      onlineUsers.set(data.name, socket.id);
+      
+      // Auto-create individual squad room as host
+      if (!activeSquads.has(data.name)) {
+        activeSquads.set(data.name, { host: data.name, guest: null });
+      }
+      socket.join(`squad_${data.name}`);
     }
-    gameManager.addPlayer(socket.id, data.name);
+    gameManager.addPlayer(socket.id, data ? data.name : 'Guest');
+  });
+
+  // --- SQUAD & INVITE SOCKET LOGIC ---
+  socket.on('send_squad_invite', async ({ targetUsername }) => {
+    const recipientSocketId = onlineUsers.get(targetUsername);
+    if (!recipientSocketId) return;
+
+    const senderUser = await User.findOne({ username: authenticatedUser }).select('avatar username');
+    
+    io.to(recipientSocketId).emit('squad_invite_received', {
+      hostUsername: authenticatedUser,
+      hostAvatar: senderUser ? senderUser.avatar : ''
+    });
+  });
+
+  socket.on('accept_squad_invite', async ({ hostUsername }) => {
+    const squad = activeSquads.get(hostUsername);
+    if (!squad) return;
+
+    const guestUser = await User.findOne({ username: authenticatedUser }).select('username avatar');
+    squad.guest = { username: guestUser.username, avatar: guestUser.avatar || '' };
+
+    socket.join(`squad_${hostUsername}`);
+
+    const hostUser = await User.findOne({ username: hostUsername }).select('username avatar');
+
+    // Notify everyone in squad of updated state
+    io.to(`squad_${hostUsername}`).emit('squad_updated', {
+      host: { username: hostUser.username, avatar: hostUser.avatar || '' },
+      guest: squad.guest,
+      isHost: false
+    });
+  });
+
+  socket.on('request_squad_state', async () => {
+    if (!authenticatedUser) return;
+    const squad = activeSquads.get(authenticatedUser);
+    const hostUser = await User.findOne({ username: authenticatedUser }).select('username avatar');
+
+    socket.emit('squad_updated', {
+      host: { username: hostUser.username, avatar: hostUser.avatar || '' },
+      guest: squad ? squad.guest : null,
+      isHost: true
+    });
+  });
+
+  socket.on('start_game_request', () => {
+    if (!authenticatedUser) return;
+    const squad = activeSquads.get(authenticatedUser);
+    if (squad && squad.host === authenticatedUser) {
+      io.to(`squad_${authenticatedUser}`).emit('game_started_by_host');
+    }
   });
 
   socket.on('select_character', (char) => {
@@ -112,17 +145,18 @@ io.on('connection', (socket) => {
   });
 
   socket.on('disconnect', () => {
-    console.log(`Player disconnected: ${socket.id}`);
-    const player = gameManager.players ? gameManager.players[socket.id] : null;
-    if (player && player.name) {
-      onlineUsers.delete(player.name);
+    if (authenticatedUser) {
+      onlineUsers.delete(authenticatedUser);
+      if (activeSquads.has(authenticatedUser)) {
+        activeSquads.delete(authenticatedUser);
+      }
     }
     gameManager.removePlayer(socket.id);
     io.emit('player_left', socket.id);
   });
 });
 
-// --- GET USER PROFILE ---
+// --- PROFILE & FRIENDS ENDPOINTS ---
 app.get('/api/profile/:username', async (req, res) => {
   try {
     const user = await User.findOne({ username: req.params.username }).select('-password');
@@ -140,16 +174,10 @@ app.get('/api/profile/:username', async (req, res) => {
   }
 });
 
-// --- UPDATE AVATAR ---
 app.post('/api/profile/avatar', async (req, res) => {
   const { username, avatar } = req.body;
   try {
-    const user = await User.findOneAndUpdate(
-      { username },
-      { avatar },
-      { new: true }
-    ).select('-password');
-    
+    const user = await User.findOneAndUpdate({ username }, { avatar }, { new: true }).select('-password');
     if (!user) return res.status(404).json({ message: 'User not found' });
     res.json({ success: true, avatar: user.avatar });
   } catch (err) {
@@ -157,7 +185,6 @@ app.post('/api/profile/avatar', async (req, res) => {
   }
 });
 
-// --- FRIENDS ENDPOINTS ---
 app.get('/api/friends/list', async (req, res) => {
   const { username } = req.query;
   try {
@@ -176,7 +203,6 @@ app.get('/api/friends/list', async (req, res) => {
   }
 });
 
-// SEARCH USERS IN MONGO DB
 app.get('/api/friends/search', async (req, res) => {
   const { query, username } = req.query;
   if (!query || query.trim() === '') return res.json([]);
@@ -185,16 +211,9 @@ app.get('/api/friends/search', async (req, res) => {
     const matches = await User.find({
       username: { $regex: query, $options: 'i' },
       username: { $ne: username }
-    })
-    .select('username avatar')
-    .limit(10);
+    }).select('username avatar').limit(10);
 
-    const formatted = matches.map(u => ({
-      username: u.username,
-      avatar: u.avatar || ''
-    }));
-
-    res.json(formatted);
+    res.json(matches.map(u => ({ username: u.username, avatar: u.avatar || '' })));
   } catch (err) {
     res.status(500).json({ message: 'Failed to search users' });
   }
@@ -205,14 +224,9 @@ app.post('/api/friends/request', async (req, res) => {
   try {
     const targetUser = await User.findOne({ username: to });
     const senderUser = await User.findOne({ username: from });
-
     if (!targetUser || !senderUser) return res.status(404).json({ message: 'User not found' });
 
-    await User.updateOne(
-      { username: to },
-      { $addToSet: { friendRequests: senderUser._id } }
-    );
-
+    await User.updateOne({ username: to }, { $addToSet: { friendRequests: senderUser._id } });
     res.json({ message: 'Friend request sent!' });
   } catch (err) {
     res.status(500).json({ message: 'Error sending friend request' });
@@ -225,12 +239,7 @@ app.get('/api/friends/requests', async (req, res) => {
     const user = await User.findOne({ username }).populate('friendRequests', 'username avatar');
     if (!user) return res.json([]);
 
-    const incoming = (user.friendRequests || []).map(r => ({
-      username: r.username,
-      avatar: r.avatar || ''
-    }));
-
-    res.json(incoming);
+    res.json((user.friendRequests || []).map(r => ({ username: r.username, avatar: r.avatar || '' })));
   } catch (err) {
     res.status(500).json({ message: 'Failed to load requests' });
   }
@@ -241,14 +250,9 @@ app.post('/api/friends/respond', async (req, res) => {
   try {
     const user = await User.findOne({ username });
     const targetUser = await User.findOne({ username: target });
-
     if (!user || !targetUser) return res.status(404).json({ message: 'User not found' });
 
-    // Remove from incoming requests
-    await User.updateOne(
-      { username },
-      { $pull: { friendRequests: targetUser._id } }
-    );
+    await User.updateOne({ username }, { $pull: { friendRequests: targetUser._id } });
 
     if (action === 'accept') {
       await User.updateOne({ username }, { $addToSet: { friends: targetUser._id } });

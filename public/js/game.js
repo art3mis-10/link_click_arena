@@ -2,6 +2,8 @@ const socket = io();
 let selectedCharacter = 'cheng_xiaoshi';
 let playerName = '';
 let authToken = '';
+let userAvatar = '';
+let isSquadHost = true;
 
 function showScreen(screenId) {
   document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
@@ -27,6 +29,7 @@ async function handleRegister() {
 
     authToken = data.token;
     playerName = data.username;
+    userAvatar = data.avatar || '';
     onAuthSuccess(data.avatar);
   } catch (err) {
     showError('Server connection error');
@@ -51,6 +54,7 @@ async function handleLogin() {
 
     authToken = data.token;
     playerName = data.username;
+    userAvatar = data.avatar || '';
     onAuthSuccess(data.avatar);
   } catch (err) {
     showError('Server connection error');
@@ -75,7 +79,77 @@ function onAuthSuccess(avatarUrl = '') {
   socket.emit('player_login', { name: playerName, token: authToken });
   showScreen('lobby-screen');
   loadFriendRequests();
+  setupInviteBannerDOM();
 }
+
+// --- TOP-HANGING SQUAD INVITE POPUP BANNER ---
+function setupInviteBannerDOM() {
+  if (document.getElementById('squad-invite-banner')) return;
+
+  const banner = document.createElement('div');
+  banner.id = 'squad-invite-banner';
+  banner.style.cssText = `
+    position: fixed;
+    top: -100px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 380px;
+    background: #1a1d24;
+    border: 2px solid #00ffff;
+    border-radius: 0 0 12px 12px;
+    box-shadow: 0 8px 24px rgba(0, 255, 255, 0.3);
+    padding: 14px 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    z-index: 9999;
+    transition: top 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  `;
+
+  banner.innerHTML = `
+    <div style="display:flex; align-items:center; gap:10px; width:100%;">
+      <div id="invite-banner-pfp" style="width:36px; height:36px; border-radius:50%; background:#333; display:flex; align-items:center; justify-content:center; overflow:hidden; border:1px solid #00ffff; font-weight:bold; color:#fff;"></div>
+      <span id="invite-banner-text" style="color:#fff; font-size:13px; font-weight:600;"></span>
+    </div>
+    <div style="display:flex; gap:12px; width:100%; justify-content:flex-end;">
+      <button id="invite-accept-btn" style="background:#00ffff; color:#000; border:none; padding:6px 16px; border-radius:4px; font-weight:bold; cursor:pointer;">Accept</button>
+      <button id="invite-ignore-btn" style="background:#333; color:#aaa; border:none; padding:6px 16px; border-radius:4px; font-weight:bold; cursor:pointer;">Ignore</button>
+    </div>
+  `;
+
+  document.body.appendChild(banner);
+}
+
+function showInviteBanner(hostUsername, hostAvatar) {
+  setupInviteBannerDOM();
+  const banner = document.getElementById('squad-invite-banner');
+  const textEl = document.getElementById('invite-banner-text');
+  const pfpEl = document.getElementById('invite-banner-pfp');
+
+  textEl.innerText = `${hostUsername} invites you to join their squad.`;
+  if (hostAvatar) {
+    pfpEl.innerHTML = `<img src="${hostAvatar}" style="width:100%; height:100%; object-fit:cover;" />`;
+  } else {
+    pfpEl.innerText = hostUsername.charAt(0).toUpperCase();
+  }
+
+  banner.style.top = '0px';
+
+  document.getElementById('invite-accept-btn').onclick = () => {
+    socket.emit('accept_squad_invite', { hostUsername });
+    banner.style.top = '-100px';
+    goToTeamScreen();
+  };
+
+  document.getElementById('invite-ignore-btn').onclick = () => {
+    banner.style.top = '-100px';
+  };
+}
+
+socket.on('squad_invite_received', (data) => {
+  showInviteBanner(data.hostUsername, data.hostAvatar);
+});
 
 // --- PROFILE & AVATAR HANDLERS ---
 function updateAvatarUI(avatarUrl, username) {
@@ -150,6 +224,7 @@ function handlePfpUpload(event) {
       const data = await res.json();
 
       if (res.ok) {
+        userAvatar = data.avatar;
         updateAvatarUI(data.avatar, playerName);
       } else {
         alert(data.message || 'Failed to update avatar');
@@ -311,9 +386,108 @@ async function respondFriendRequest(fromUsername, action) {
   }
 }
 
-// --- LOBBY & GAME FLOW ---
-function goToTeamScreen() { showScreen('team-screen'); }
-function goToCharScreen() { showScreen('char-screen'); }
+// --- SQUAD LOBBY SYSTEM ---
+function goToTeamScreen() {
+  showScreen('team-screen');
+  socket.emit('request_squad_state');
+  loadSquadFriendsSidebar();
+}
+
+async function loadSquadFriendsSidebar() {
+  const sidebarEl = document.getElementById('squad-friends-sidebar');
+  if (!sidebarEl) return;
+
+  sidebarEl.innerHTML = '<p style="color:#888; text-align:center; font-size:12px;">Loading friends...</p>';
+
+  try {
+    const res = await fetch(`/api/friends/list?username=${playerName}`);
+    const friends = await res.json();
+
+    if (friends.length === 0) {
+      sidebarEl.innerHTML = '<p style="color:#888; text-align:center; font-size:12px;">No friends added.</p>';
+      return;
+    }
+
+    sidebarEl.innerHTML = friends.map(f => `
+      <div style="display:flex; align-items:center; justify-content:space-between; background:rgba(255,255,255,0.05); padding:8px 10px; border-radius:6px; margin-bottom:8px;">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <div style="width:30px; height:30px; border-radius:50%; background:#333; overflow:hidden; display:flex; align-items:center; justify-content:center; color:#fff; font-size:12px;">
+            ${f.avatar ? `<img src="${f.avatar}" style="width:100%;height:100%;object-fit:cover;"/>` : f.username.charAt(0).toUpperCase()}
+          </div>
+          <div>
+            <div style="color:#fff; font-size:12px; font-weight:bold;">${f.username}</div>
+            <div style="font-size:9px; color:${f.isOnline ? '#00ff88' : '#888'};">${f.isOnline ? 'ONLINE' : 'OFFLINE'}</div>
+          </div>
+        </div>
+        ${f.isOnline ? `<button class="action-btn-sm" onclick="inviteFriendToSquad('${f.username}')" style="font-size:10px; padding:4px 8px;">INVITE</button>` : ''}
+      </div>
+    `).join('');
+  } catch (err) {
+    sidebarEl.innerHTML = '<p style="color:#ff4d4d; text-align:center; font-size:12px;">Error loading sidebar</p>';
+  }
+}
+
+function inviteFriendToSquad(friendUsername) {
+  socket.emit('send_squad_invite', { targetUsername: friendUsername });
+  alert(`Invite sent to ${friendUsername}`);
+}
+
+socket.on('squad_updated', (data) => {
+  // Update Host / Player 1 slot
+  const slot1Pfp = document.getElementById('slot1-pfp');
+  const slot1Name = document.getElementById('slot1-name');
+  
+  if (data.host) {
+    slot1Name.innerText = data.host.username;
+    if (data.host.avatar) {
+      slot1Pfp.innerHTML = `<img src="${data.host.avatar}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;" />`;
+    } else {
+      slot1Pfp.innerText = data.host.username.charAt(0).toUpperCase();
+    }
+  }
+
+  // Update Guest / Player 2 slot
+  const slot2Pfp = document.getElementById('slot2-pfp');
+  const slot2Name = document.getElementById('slot2-name');
+
+  if (data.guest) {
+    slot2Name.innerText = data.guest.username;
+    if (data.guest.avatar) {
+      slot2Pfp.innerHTML = `<img src="${data.guest.avatar}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;" />`;
+    } else {
+      slot2Pfp.innerText = data.guest.username.charAt(0).toUpperCase();
+    }
+  } else {
+    slot2Name.innerText = 'P2 (EMPTY)';
+    slot2Pfp.innerHTML = '<span style="font-size:24px; color:#555;">+</span>';
+  }
+
+  // Update Host controls vs Guest notice
+  isSquadHost = (data.host && data.host.username === playerName);
+  const startBtn = document.getElementById('start-battle-btn');
+  if (startBtn) {
+    if (isSquadHost) {
+      startBtn.innerText = 'SELECT CHARACTER';
+      startBtn.disabled = false;
+      startBtn.onclick = () => goToCharScreen();
+    } else {
+      startBtn.innerText = 'WAITING FOR HOST...';
+      startBtn.disabled = true;
+      startBtn.onclick = null;
+    }
+  }
+});
+
+socket.on('game_started_by_host', () => {
+  goToCharScreen();
+});
+
+function goToCharScreen() {
+  if (isSquadHost) {
+    socket.emit('start_game_request');
+  }
+  showScreen('char-screen');
+}
 
 function selectCharacter(char) {
   selectedCharacter = char;
