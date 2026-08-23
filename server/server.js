@@ -15,10 +15,6 @@ const gameManager = new GameManager();
 
 // Keep track of online users via sockets/login
 const onlineUsers = new Set();
-const usersDb = {}; // Replace with your actual database object/storage
-const friendRequests = []; // [{ from: 'userA', to: 'userB' }]
-const friendRelationships = []; // [{ user1: 'userA', user2: 'userB' }]
-
 
 // Essential Middleware (Must be before routes)
 app.use(express.json({ limit: '50mb' }));
@@ -60,7 +56,7 @@ app.post('/api/register', async (req, res) => {
       process.env.JWT_SECRET || 'fallback_secret'
     );
 
-    return res.json({ token, username: user.username });
+    return res.json({ token, username: user.username, avatar: user.avatar || '' });
   } catch (err) {
     console.error('Registration Error:', err);
     return res.status(500).json({ message: err.message || 'Server error during registration' });
@@ -86,7 +82,7 @@ app.post('/api/login', async (req, res) => {
       process.env.JWT_SECRET || 'fallback_secret'
     );
 
-    return res.json({ token, username: user.username });
+    return res.json({ token, username: user.username, avatar: user.avatar || '' });
   } catch (err) {
     console.error('Login Error:', err);
     return res.status(500).json({ message: 'Server error during login' });
@@ -98,6 +94,9 @@ io.on('connection', (socket) => {
   console.log(`Player connected: ${socket.id}`);
 
   socket.on('player_login', (data) => {
+    if (data && data.name) {
+      onlineUsers.add(data.name);
+    }
     gameManager.addPlayer(socket.id, data.name);
   });
 
@@ -114,6 +113,10 @@ io.on('connection', (socket) => {
 
   socket.on('disconnect', () => {
     console.log(`Player disconnected: ${socket.id}`);
+    const player = gameManager.players ? gameManager.players[socket.id] : null;
+    if (player && player.name) {
+      onlineUsers.delete(player.name);
+    }
     gameManager.removePlayer(socket.id);
     io.emit('player_left', socket.id);
   });
@@ -124,9 +127,16 @@ app.get('/api/profile/:username', async (req, res) => {
   try {
     const user = await User.findOne({ username: req.params.username }).select('-password');
     if (!user) return res.status(404).json({ message: 'User not found' });
-    res.json(user);
+
+    res.json({
+      username: user.username,
+      avatar: user.avatar || '',
+      matchesPlayed: user.matchesPlayed || 0,
+      friendsCount: user.friends ? user.friends.length : 0,
+      isOnline: onlineUsers.has(user.username)
+    });
   } catch (err) {
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: 'Server error fetching profile' });
   }
 });
 
@@ -147,74 +157,108 @@ app.post('/api/profile/avatar', async (req, res) => {
   }
 });
 
-// PROFILE ENDPOINT
-app.get('/api/profile/:username', (req, res) => {
-  const user = usersDb[req.params.username] || { username: req.params.username };
-  const friendsCount = friendRelationships.filter(f => f.user1 === user.username || f.user2 === user.username).length;
-  
-  res.json({
-    username: user.username,
-    avatar: user.avatar || '',
-    matchesPlayed: user.matchesPlayed || 0,
-    friendsCount: friendsCount,
-    isOnline: onlineUsers.has(user.username)
-  });
-});
-
-// FRIENDS ENDPOINTS
-app.get('/api/friends/list', (req, res) => {
+// --- FRIENDS ENDPOINTS ---
+app.get('/api/friends/list', async (req, res) => {
   const { username } = req.query;
-  const userFriends = friendRelationships
-    .filter(f => f.user1 === username || f.user2 === username)
-    .map(f => (f.user1 === username ? f.user2 : f.user1));
+  try {
+    const user = await User.findOne({ username }).populate('friends', 'username avatar');
+    if (!user) return res.json([]);
 
-  const list = userFriends.map(friendName => ({
-    username: friendName,
-    avatar: usersDb[friendName]?.avatar || '',
-    isOnline: onlineUsers.has(friendName)
-  }));
+    const list = (user.friends || []).map(friend => ({
+      username: friend.username,
+      avatar: friend.avatar || '',
+      isOnline: onlineUsers.has(friend.username)
+    }));
 
-  res.json(list);
-});
-
-app.get('/api/friends/search', (req, res) => {
-  const { query, username } = req.query;
-  const matches = Object.keys(usersDb)
-    .filter(u => u.toLowerCase().includes(query.toLowerCase()) && u !== username)
-    .map(u => ({ username: u, avatar: usersDb[u]?.avatar || '' }));
-
-  res.json(matches);
-});
-
-app.post('/api/friends/request', (req, res) => {
-  const { from, to } = req.body;
-  if (!usersDb[to]) return res.status(404).json({ message: 'User not found' });
-  
-  const exists = friendRequests.some(r => r.from === from && r.to === to);
-  if (!exists) friendRequests.push({ from, to });
-
-  res.json({ message: 'Friend request sent!' });
-});
-
-app.get('/api/friends/requests', (req, res) => {
-  const { username } = req.query;
-  const incoming = friendRequests
-    .filter(r => r.to === username)
-    .map(r => ({ username: r.from, avatar: usersDb[r.from]?.avatar || '' }));
-
-  res.json(incoming);
-});
-
-app.post('/api/friends/respond', (req, res) => {
-  const { username, target, action } = req.body;
-  const index = friendRequests.findIndex(r => r.from === target && r.to === username);
-  if (index !== -1) friendRequests.splice(index, 1);
-
-  if (action === 'accept') {
-    friendRelationships.push({ user1: username, user2: target });
+    res.json(list);
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to load friends list' });
   }
+});
 
-  res.json({ success: true });
+// SEARCH USERS IN MONGO DB
+app.get('/api/friends/search', async (req, res) => {
+  const { query, username } = req.query;
+  if (!query || query.trim() === '') return res.json([]);
+
+  try {
+    const matches = await User.find({
+      username: { $regex: query, $options: 'i' },
+      username: { $ne: username }
+    })
+    .select('username avatar')
+    .limit(10);
+
+    const formatted = matches.map(u => ({
+      username: u.username,
+      avatar: u.avatar || ''
+    }));
+
+    res.json(formatted);
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to search users' });
+  }
+});
+
+app.post('/api/friends/request', async (req, res) => {
+  const { from, to } = req.body;
+  try {
+    const targetUser = await User.findOne({ username: to });
+    const senderUser = await User.findOne({ username: from });
+
+    if (!targetUser || !senderUser) return res.status(404).json({ message: 'User not found' });
+
+    await User.updateOne(
+      { username: to },
+      { $addToSet: { friendRequests: senderUser._id } }
+    );
+
+    res.json({ message: 'Friend request sent!' });
+  } catch (err) {
+    res.status(500).json({ message: 'Error sending friend request' });
+  }
+});
+
+app.get('/api/friends/requests', async (req, res) => {
+  const { username } = req.query;
+  try {
+    const user = await User.findOne({ username }).populate('friendRequests', 'username avatar');
+    if (!user) return res.json([]);
+
+    const incoming = (user.friendRequests || []).map(r => ({
+      username: r.username,
+      avatar: r.avatar || ''
+    }));
+
+    res.json(incoming);
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to load requests' });
+  }
+});
+
+app.post('/api/friends/respond', async (req, res) => {
+  const { username, target, action } = req.body;
+  try {
+    const user = await User.findOne({ username });
+    const targetUser = await User.findOne({ username: target });
+
+    if (!user || !targetUser) return res.status(404).json({ message: 'User not found' });
+
+    // Remove from incoming requests
+    await User.updateOne(
+      { username },
+      { $pull: { friendRequests: targetUser._id } }
+    );
+
+    if (action === 'accept') {
+      await User.updateOne({ username }, { $addToSet: { friends: targetUser._id } });
+      await User.updateOne({ username: target }, { $addToSet: { friends: user._id } });
+    }
+
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ message: 'Error responding to friend request' });
+  }
 });
 
 const PORT = process.env.PORT || 3000;
