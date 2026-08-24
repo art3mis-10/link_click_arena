@@ -3,211 +3,711 @@
 <head>
   <meta charset="UTF-8">
   <title>Link Click 2.5D Arena</title>
+
   <link rel="stylesheet" href="/css/style.css">
+
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="/socket.io/socket.io.js"></script>
 </head>
+
 <body>
 
-  <!-- 1. LOGIN SCREEN -->
+  <!-- LOGIN -->
   <div id="login-screen" class="screen">
+
     <div class="login-box">
-      <div class="login-title">LINK CLICK</div>
-      <input type="text" id="username" class="input-field" placeholder="Username..." />
-      <input type="password" id="password" class="input-field" placeholder="Password..." />
-      
-      <div style="display: flex; gap: 10px; width: 100%;">
-        <button class="btn" style="flex: 1;" onclick="handleLogin()">LOGIN</button>
-        <button class="btn secondary-btn" style="flex: 1;" onclick="handleRegister()">REGISTER</button>
+
+      <div class="login-title">
+        LINK CLICK
       </div>
-      <p id="auth-error" style="color: #ff4d4d; font-size: 14px; text-align: center; display: none;"></p>
+
+      <input
+        type="text"
+        id="username"
+        class="input-field"
+        placeholder="Username..."
+      >
+
+      <input
+        type="password"
+        id="password"
+        class="input-field"
+        placeholder="Password..."
+      >
+
+      <div style="display:flex; gap:10px; width:100%;">
+
+        <button
+          class="btn"
+          style="flex:1;"
+          onclick="handleLogin()"
+        >
+          LOGIN
+        </button>
+
+        <button
+          class="btn secondary-btn"
+          style="flex:1;"
+          onclick="handleRegister()"
+        >
+          REGISTER
+        </button>
+
+      </div>
+
+      <p
+        id="auth-error"
+        style="
+          color:#ff4d4d;
+          font-size:14px;
+          text-align:center;
+          display:none;
+        "
+      ></p>
+
     </div>
+
   </div>
 
-  <!-- 2. PURE MAIN LOBBY -->
-  <div id="lobby-screen" class="screen" style="display: none;">
+
+  <!-- MAIN LOBBY -->
+  <div
+    id="lobby-screen"
+    class="screen"
+    style="display:none;"
+  >
+
     <div class="lobby-header">
       <h1>TIME AGENT LOBBY</h1>
     </div>
 
-    <!-- TOP RIGHT CONTAINER -->
+
     <div class="top-right-bar-container">
-      <div class="top-right-bar" onclick="openProfileScreen()">
-        <div id="top-pfp" class="round-pfp">?</div>
-        <span id="top-username" class="top-username-text">Player</span>
+
+      <div
+        class="top-right-bar"
+        onclick="openProfileScreen()"
+      >
+
+        <div
+          id="top-pfp"
+          class="round-pfp"
+        >
+          ?
+        </div>
+
+        <span
+          id="top-username"
+          class="top-username-text"
+        >
+          Player
+        </span>
+
       </div>
-      <button class="friends-btn-shortcut" onclick="openFriendsScreen()">👥 FRIENDS</button>
+
+
+      <button
+        class="friends-btn-shortcut"
+        onclick="openFriendsScreen()"
+      >
+        👥 FRIENDS
+      </button>
+
     </div>
 
-    <button class="btn bottom-right" onclick="goToTeamScreen()">READY FOR BATTLE</button>
+
+    <div class="mode-buttons">
+
+      <button
+        class="btn mode-btn pvp-btn"
+        onclick="openMode('pvp')"
+      >
+        PVP ARENA
+      </button>
+
+      <button
+        class="btn mode-btn"
+        onclick="openMode('match')"
+      >
+        MATCH
+      </button>
+
+    </div>
+
   </div>
 
-  <!-- 3. PROFILE SCREEN -->
-  <div id="profile-screen" class="screen" style="display: none;">
+
+  <!-- PROFILE -->
+  <div
+    id="profile-screen"
+    class="screen"
+    style="display:none;"
+  >
+
     <div class="profile-card">
-      <button class="close-btn" onclick="showScreen('lobby-screen')">✕</button>
-      
+
+      <button
+        class="close-btn"
+        onclick="showScreen('lobby-screen')"
+      >
+        ✕
+      </button>
+
+
       <div class="profile-header">
-        <div class="pfp-upload-wrapper" id="pfp-wrapper" onclick="document.getElementById('pfp-file-input').click()">
-          <div id="profile-page-pfp" class="round-pfp large-pfp">?</div>
-          <div class="pfp-overlay" id="pfp-overlay"><span>Upload</span></div>
+
+        <div
+          class="pfp-upload-wrapper"
+          id="pfp-wrapper"
+          onclick="
+            document
+              .getElementById('pfp-file-input')
+              .click()
+          "
+        >
+
+          <div
+            id="profile-page-pfp"
+            class="round-pfp large-pfp"
+          >
+            ?
+          </div>
+
+          <div
+            class="pfp-overlay"
+            id="pfp-overlay"
+          >
+            <span>Upload</span>
+          </div>
+
         </div>
-        <input type="file" id="pfp-file-input" accept="image/*" style="display: none;" onchange="handlePfpUpload(event)" />
-        
+
+
+        <input
+          type="file"
+          id="pfp-file-input"
+          accept="image/*"
+          style="display:none;"
+          onchange="handlePfpUpload(event)"
+        >
+
+
         <div class="profile-info">
-          <h2 id="profile-page-username">Player Name</h2>
-          <span class="status-badge" id="profile-status-badge">ONLINE</span>
+
+          <h2 id="profile-page-username">
+            Player Name
+          </h2>
+
+          <span
+            class="status-badge"
+            id="profile-status-badge"
+          >
+            ONLINE
+          </span>
+
         </div>
+
       </div>
+
 
       <div class="profile-stats">
+
         <div class="stat-box">
-          <span class="stat-num" id="profile-stat-matches">0</span>
-          <span class="stat-label">Matches Played</span>
+
+          <span
+            class="stat-num"
+            id="profile-stat-matches"
+          >
+            0
+          </span>
+
+          <span class="stat-label">
+            Matches Played
+          </span>
+
         </div>
+
+
         <div class="stat-box">
-          <span class="stat-num" id="profile-stat-friends">0</span>
-          <span class="stat-label">Friends</span>
+
+          <span
+            class="stat-num"
+            id="profile-stat-friends"
+          >
+            0
+          </span>
+
+          <span class="stat-label">
+            Friends
+          </span>
+
         </div>
+
       </div>
+
 
       <div id="profile-action-container"></div>
+
     </div>
+
   </div>
 
-  <!-- 4. FRIENDS SCREEN -->
-  <div id="friends-screen" class="screen" style="display: none;">
+
+  <!-- FRIENDS -->
+  <div
+    id="friends-screen"
+    class="screen"
+    style="display:none;"
+  >
+
     <div class="modal-card friends-card">
-      <button class="close-btn" onclick="showScreen('lobby-screen')">✕</button>
+
+      <button
+        class="close-btn"
+        onclick="showScreen('lobby-screen')"
+      >
+        ✕
+      </button>
+
       <h2>FRIENDS NETWORK</h2>
-      
+
+
       <div class="tab-header">
-        <button class="tab-btn active" id="tab-btn-list" onclick="switchFriendsTab('list')">MY FRIENDS</button>
-        <button class="tab-btn" id="tab-btn-search" onclick="switchFriendsTab('search')">FIND FRIENDS</button>
-        <button class="tab-btn" id="tab-btn-requests" onclick="switchFriendsTab('requests')">REQUESTS <span id="req-count-badge" class="badge" style="display:none;">0</span></button>
+
+        <button
+          class="tab-btn active"
+          id="tab-btn-list"
+          onclick="switchFriendsTab('list')"
+        >
+          MY FRIENDS
+        </button>
+
+
+        <button
+          class="tab-btn"
+          id="tab-btn-search"
+          onclick="switchFriendsTab('search')"
+        >
+          FIND FRIENDS
+        </button>
+
+
+        <button
+          class="tab-btn"
+          id="tab-btn-requests"
+          onclick="switchFriendsTab('requests')"
+        >
+          REQUESTS
+
+          <span
+            id="req-count-badge"
+            class="badge"
+            style="display:none;"
+          >
+            0
+          </span>
+
+        </button>
+
       </div>
 
-      <!-- TAB 1: FRIENDS LIST -->
-      <div id="tab-content-list" class="tab-content active">
-        <div id="friends-list" class="scroll-list"></div>
+
+      <div
+        id="tab-content-list"
+        class="tab-content active"
+      >
+        <div
+          id="friends-list"
+          class="scroll-list"
+        ></div>
       </div>
 
-      <!-- TAB 2: FIND FRIENDS -->
-      <div id="tab-content-search" class="tab-content">
+
+      <div
+        id="tab-content-search"
+        class="tab-content"
+      >
+
         <div class="search-box">
-          <input type="text" id="friend-search-input" class="input-field" placeholder="Search username..." onkeyup="if(event.key==='Enter') searchUsers()" />
-          <button class="btn" style="padding: 10px 20px;" onclick="searchUsers()">SEARCH</button>
+
+          <input
+            type="text"
+            id="friend-search-input"
+            class="input-field"
+            placeholder="Exact username..."
+            onkeyup="
+              if(event.key === 'Enter') {
+                searchUsers()
+              }
+            "
+          >
+
+          <button
+            class="btn"
+            style="padding:10px 20px;"
+            onclick="searchUsers()"
+          >
+            SEARCH
+          </button>
+
         </div>
-        <div id="search-results-list" class="scroll-list"></div>
+
+
+        <div
+          id="search-results-list"
+          class="scroll-list"
+        ></div>
+
       </div>
 
-      <!-- TAB 3: REQUESTS -->
-      <div id="tab-content-requests" class="tab-content">
-        <div id="requests-list" class="scroll-list"></div>
+
+      <div
+        id="tab-content-requests"
+        class="tab-content"
+      >
+
+        <div
+          id="requests-list"
+          class="scroll-list"
+        ></div>
+
       </div>
+
     </div>
+
   </div>
 
-  <!-- 5. TEAM / PARTY SCREEN -->
-  <div id="team-screen" class="screen" style="display: none;">
-    <div class="lobby-header">
-      <h1>SQUAD LOBBY</h1>
+
+  <!-- SQUAD LOBBY -->
+  <div
+    id="team-screen"
+    class="screen"
+    style="display:none;"
+  >
+
+    <div class="lobby-header squad-header-row">
+
+      <div>
+
+        <h1 id="squad-mode-title">
+          SQUAD LOBBY
+        </h1>
+
+        <div
+          id="squad-capacity"
+          class="squad-capacity"
+        >
+          1 / 4 PLAYERS
+        </div>
+
+      </div>
+
     </div>
 
-    <div class="team-container">
 
-      <!-- PLAYER 1 / HOST -->
-      <div class="team-slot filled">
-        <div class="player-avatar" id="slot1-pfp">?</div>
+    <div class="team-container four-player-team-container">
 
-        <h3 id="slot1-name" style="color: #66fcf1;">
+
+      <!-- SLOT 1 -->
+      <div
+        class="team-slot"
+        id="team-slot-1"
+      >
+
+        <div
+          class="player-avatar"
+          id="slot1-pfp"
+        >
+          ?
+        </div>
+
+        <h3 id="slot1-name">
           Player
         </h3>
 
-        <p style="font-size: 12px; color: #888;">
+        <p id="slot1-role">
           PARTY LEADER
         </p>
+
       </div>
 
-      <!-- PLAYER 2 / GUEST -->
-      <div class="team-slot">
-        <div class="player-avatar" id="slot2-pfp">
-          <span style="font-size: 32px; color: #45a29e;">+</span>
+
+      <!-- SLOT 2 -->
+      <div
+        class="team-slot"
+        id="team-slot-2"
+      >
+
+        <div
+          class="player-avatar"
+          id="slot2-pfp"
+        >
+          <span class="plus-symbol">+</span>
         </div>
 
-        <h3 id="slot2-name" style="color: #a0a5ab;">
+        <h3 id="slot2-name">
           EMPTY SLOT
         </h3>
 
-        <p style="font-size: 12px; color: #888;">
-          SQUAD MEMBER
+        <p id="slot2-role">
+          INVITE FRIEND
         </p>
+
+      </div>
+
+
+      <!-- SLOT 3 -->
+      <div
+        class="team-slot"
+        id="team-slot-3"
+      >
+
+        <div
+          class="player-avatar"
+          id="slot3-pfp"
+        >
+          <span class="plus-symbol">+</span>
+        </div>
+
+        <h3 id="slot3-name">
+          EMPTY SLOT
+        </h3>
+
+        <p id="slot3-role">
+          INVITE FRIEND
+        </p>
+
+      </div>
+
+
+      <!-- SLOT 4 -->
+      <div
+        class="team-slot"
+        id="team-slot-4"
+      >
+
+        <div
+          class="player-avatar"
+          id="slot4-pfp"
+        >
+          <span class="plus-symbol">+</span>
+        </div>
+
+        <h3 id="slot4-name">
+          EMPTY SLOT
+        </h3>
+
+        <p id="slot4-role">
+          INVITE FRIEND
+        </p>
+
       </div>
 
     </div>
 
-    <!-- ONLINE FRIENDS / INVITE LIST -->
-    <div
-      id="squad-friends-sidebar"
-      style="
-        position: absolute;
-        right: 40px;
-        top: 120px;
-        width: 230px;
-        max-height: 430px;
-        overflow-y: auto;
-      "
-    ></div>
+
+    <aside class="squad-sidebar-panel">
+
+      <h3>INVITE FRIENDS</h3>
+
+      <div id="squad-friends-sidebar"></div>
+
+    </aside>
+
 
     <button
       class="btn bottom-left secondary-btn"
-      onclick="showScreen('lobby-screen')"
+      onclick="returnToMainLobby()"
     >
       BACK TO LOBBY
     </button>
 
+
     <button
       class="btn bottom-right"
-      id="start-battle-btn"
-      onclick="hostStartGame()"
+      id="start-character-btn"
+      onclick="startCharacterSelect()"
     >
-      START GAME
+      CHARACTER SELECT
     </button>
+
   </div>
 
-  <!-- 6. CHARACTER SELECTION SCREEN -->
-  <div id="char-screen" class="screen" style="display: none;">
-    <div class="lobby-header" style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
-      <h1>SELECT YOUR AGENT</h1>
-      <div class="team-preview">
-        <span>Team Picks:</span>
-        <strong id="p1-pick-display" style="color: #66fcf1;">Cheng Xiaoshi</strong>
-        <span style="color: #666;">|</span>
-        <span style="color: #666;">P2: Waiting...</span>
+
+  <!-- CHARACTER SELECT -->
+  <div
+    id="char-screen"
+    class="screen"
+    style="display:none;"
+  >
+
+    <div class="lobby-header character-header-row">
+
+      <div>
+
+        <div
+          id="character-mode-label"
+          class="eyebrow-label"
+        >
+          MODE
+        </div>
+
+        <h1>SELECT YOUR AGENT</h1>
+
       </div>
+
+
+      <div class="team-preview character-status-panel">
+
+        <strong id="my-pick-display">
+          You: Selecting...
+        </strong>
+
+
+        <div
+          id="match-teammate-panel"
+          style="
+            display:none;
+            align-items:center;
+            gap:10px;
+          "
+        >
+
+          <span class="preview-divider">
+            |
+          </span>
+
+          <span id="teammate-pick-display">
+            Teammate: Selecting...
+          </span>
+
+        </div>
+
+
+        <span
+          id="pvp-ready-counter"
+          class="pvp-ready-counter"
+          style="display:none;"
+        >
+          0 / 1 READY
+        </span>
+
+      </div>
+
     </div>
+
+
+    <div
+      id="selection-privacy-note"
+      class="selection-note"
+    ></div>
+
+
     <div class="char-container">
-      <div class="card active" id="card-cheng" onclick="selectCharacter('cheng_xiaoshi')">
+
+
+      <div
+        class="card"
+        id="card-cheng"
+        onclick="selectCharacter('cheng_xiaoshi')"
+      >
+
         <h3>CHENG XIAOSHI</h3>
-        <p><strong>ROLE: COMBATER</strong></p>
-        <p>Enters photo dimensions directly. High mobility combat specialist.</p>
+
+        <p>
+          <strong>
+            ROLE: COMBATER
+          </strong>
+        </p>
+
+        <p>
+          Enters photo dimensions directly.
+          High mobility combat specialist.
+        </p>
+
       </div>
-      <div class="card" id="card-lu" onclick="selectCharacter('lu_guang')">
+
+
+      <div
+        class="card"
+        id="card-lu"
+        onclick="selectCharacter('lu_guang')"
+      >
+
         <h3>LU GUANG</h3>
-        <p><strong>ROLE: OBSERVER</strong></p>
-        <p>Tracks target trajectories across the 12-hour window. Strategic vision.</p>
+
+        <p>
+          <strong>
+            ROLE: OBSERVER
+          </strong>
+        </p>
+
+        <p>
+          Tracks target trajectories across the
+          12-hour window. Strategic vision.
+        </p>
+
       </div>
+
     </div>
-    <button class="btn bottom-right" onclick="lockCharacterAndStart()">LOCK IN & COMBAT</button>
+
+
+    <div
+      id="character-select-message"
+      class="character-select-message"
+    >
+      Choose a character.
+    </div>
+
+
+    <button
+      class="btn bottom-right"
+      id="ready-character-btn"
+      onclick="readyCharacter()"
+      disabled
+    >
+      READY
+    </button>
+
   </div>
 
-  <!-- 7. GAME HUD & CANVAS -->
-  <div id="ui-layer" style="display: none;">
-    <div id="hud-role">ROLE: UNASSIGNED</div>
-    <div id="instructions">WASD: Move | SHIFT: Lock Mouse to Turn Camera</div>
-    <button class="btn action-btn-danger" onclick="leaveGame()" style="margin-top: 15px;">ABORT MISSION</button>
+
+  <!-- ARENA HUD -->
+  <div
+    id="ui-layer"
+    style="display:none;"
+  >
+
+    <div id="hud-role">
+      ROLE: UNASSIGNED
+    </div>
+
+    <div id="instructions">
+      WASD: Move | SHIFT: Lock Mouse to Turn Camera
+    </div>
+
+    <button
+      class="btn action-btn-danger"
+      onclick="leaveGame()"
+      style="
+        margin-top:15px;
+        pointer-events:auto;
+      "
+    >
+      ABORT MISSION
+    </button>
+
   </div>
+
+
   <canvas id="game-canvas"></canvas>
-  <script src="/js/game.js"></script>
+
+
+  <!-- IMPORTANT: LOAD IN THIS ORDER -->
+  <script src="/js/app.js"></script>
+  <script src="/js/social.js"></script>
+  <script src="/js/squad.js"></script>
+  <script src="/js/arena.js"></script>
+
 </body>
 </html>
