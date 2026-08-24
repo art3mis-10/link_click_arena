@@ -32,6 +32,10 @@ const GameManager =
   require('./gameRoom');
 
 
+const CombatManager = 
+  require('./combatManager');
+
+
 const app =
   express();
 
@@ -380,6 +384,84 @@ async function emitSquadState(
       );
   }
 }
+
+async function finishPvpRound(
+  squad,
+  winner
+) {
+
+  /*
+    Make sure this squad still exists.
+  */
+  const existing =
+    activeSquads.get(
+      squad.host
+    );
+
+
+  if (
+    !existing ||
+    existing !== squad
+  ) {
+
+    return;
+  }
+
+
+  squad.phase =
+    'lobby';
+
+
+  squad.selections =
+    {};
+
+
+  squad.ready =
+    {};
+
+
+  /*
+    Force all surviving/dead/spectating
+    players back into squad lobby.
+  */
+  io
+    .to(
+      roomForSquad(
+        squad
+      )
+    )
+    .emit(
+      'return_to_squad',
+      {
+
+        winnerName:
+          winner.name
+      }
+    );
+
+
+  await emitSquadState(
+    squad
+  );
+}
+
+
+const combatManager =
+  new CombatManager({
+
+    io,
+
+    gameManager,
+
+    onlineUsers,
+
+    getSquadForUser,
+
+    roomForSquad,
+
+    onRoundEnd:
+      finishPvpRound
+  });
 
 
 // ============================================
@@ -894,12 +976,33 @@ function startArenaForSquad(
   );
 
 
+  /*
+    Initialize HP, cooldowns,
+    stun states, buffs, regen, etc.
+  */
+  combatManager
+    .startForSquad(
+      squad
+    );
+
+
   const players =
     socketIds
       .map(
-        id =>
-          gameManager
-            .getPlayer(id)
+        id => {
+
+          const player =
+            gameManager
+              .getPlayer(id);
+
+
+          return player
+            ? combatManager
+                .publicPlayer(
+                  player
+                )
+            : null;
+        }
       )
       .filter(Boolean);
 
@@ -917,6 +1020,7 @@ function startArenaForSquad(
     .emit(
       'arena_started',
       {
+
         mode:
           squad.mode,
 
@@ -1164,9 +1268,12 @@ io.on(
   'connection',
   socket => {
 
-    let authenticatedUser =
-      null;
-
+    let authenticatedUser = null;
+    
+    combatManager.registerSocket(
+      socket,
+      () => authenticatedUser
+    );
 
     // ========================================
     // PLAYER LOGIN
@@ -2168,39 +2275,56 @@ io.on(
     socket.on(
       'player_move',
       data => {
-
-        if (!authenticatedUser) {
-
+    
+        if (
+          !authenticatedUser
+        ) {
+    
           return;
         }
-
-
+    
+    
         const squad =
           getSquadForUser(
             authenticatedUser
           );
-
-
+    
+    
         if (
           !squad ||
           squad.phase !==
             'arena'
         ) {
-
+    
           return;
         }
-
-
+    
+    
+        /*
+          Server verifies:
+    
+          - alive
+          - not stunned
+          - legitimate movement speed
+          - speed buffs
+          - arena boundaries
+        */
         const updatedPlayer =
-          gameManager
-            .updatePlayerPosition(
-              socket.id,
+          combatManager
+            .validateMovement(
+    
+              socket,
+    
+              authenticatedUser,
+    
               data
             );
-
-
-        if (updatedPlayer) {
-
+    
+    
+        if (
+          updatedPlayer
+        ) {
+    
           socket
             .to(
               roomForSquad(
@@ -2209,7 +2333,11 @@ io.on(
             )
             .emit(
               'player_moved',
-              updatedPlayer
+    
+              combatManager
+                .publicPlayer(
+                  updatedPlayer
+                )
             );
         }
       }

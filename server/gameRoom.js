@@ -34,7 +34,13 @@ class GameManager {
         0,
 
       rotation:
-        0
+        0,
+
+      pitch:
+        0,
+
+      combat:
+        null
     };
 
 
@@ -44,8 +50,10 @@ class GameManager {
 
   getPlayer(id) {
 
-    return this.players[id] ||
-      null;
+    return (
+      this.players[id] ||
+      null
+    );
   }
 
 
@@ -60,28 +68,69 @@ class GameManager {
     data
   ) {
 
-    if (!this.players[id]) {
+    const player =
+      this.players[id];
+
+
+    if (!player) {
 
       return null;
     }
 
 
-    this.players[id].x =
-      Number(data.x) ||
-      0;
+    if (
+      Number.isFinite(
+        Number(data.x)
+      )
+    ) {
+
+      player.x =
+        Number(data.x);
+    }
 
 
-    this.players[id].z =
-      Number(data.z) ||
-      0;
+    if (
+      Number.isFinite(
+        Number(data.z)
+      )
+    ) {
+
+      player.z =
+        Number(data.z);
+    }
 
 
-    this.players[id].rotation =
-      Number(data.rotation) ||
-      0;
+    if (
+      Number.isFinite(
+        Number(
+          data.rotation
+        )
+      )
+    ) {
+
+      player.rotation =
+        Number(
+          data.rotation
+        );
+    }
 
 
-    return this.players[id];
+    if (
+      Number.isFinite(
+        Number(
+          data.pitch
+        )
+      )
+    ) {
+
+      player.pitch =
+        Number(
+          data.pitch
+        );
+    }
+
+
+    return player;
   }
 
 
@@ -90,10 +139,13 @@ class GameManager {
     character
   ) {
 
-    if (this.players[id]) {
+    if (
+      this.players[id]
+    ) {
 
-      this.players[id].character =
-        character;
+      this.players[id]
+        .character =
+          character;
     }
   }
 
@@ -105,7 +157,10 @@ class GameManager {
     rotation = 0
   ) {
 
-    if (!this.players[id]) {
+    if (
+      !this.players[id]
+    ) {
+
       return;
     }
 
@@ -118,8 +173,91 @@ class GameManager {
       z;
 
 
-    this.players[id].rotation =
-      rotation;
+    this.players[id]
+      .rotation =
+        rotation;
+
+
+    this.players[id]
+      .pitch =
+        0;
+  }
+
+
+  initializeCombat(id) {
+
+    const player =
+      this.players[id];
+
+
+    if (!player) {
+
+      return null;
+    }
+
+
+    const now =
+      Date.now();
+
+
+    /*
+      Cheng is 850 HP.
+
+      Other unfinished characters also get
+      a temporary 850-HP hittable shell so
+      PvP testing does not break.
+    */
+    const maxHp =
+      850;
+
+
+    player.combat = {
+
+      maxHp,
+
+      hp:
+        maxHp,
+
+      alive:
+        true,
+
+      lastDamageAt:
+        0,
+
+      nextRegenAt:
+        now +
+        10000,
+
+      stunnedUntil:
+        0,
+
+      speedBuffUntil:
+        0,
+
+      strengthenUntil:
+        0,
+
+      basicReadyAt:
+        0,
+
+      controlReadyAt:
+        0,
+
+      strengthenReadyAt:
+        0,
+
+      lastMoveAt:
+        now,
+
+      lastMoveX:
+        player.x,
+
+      lastMoveZ:
+        player.z
+    };
+
+
+    return player.combat;
   }
 }
 

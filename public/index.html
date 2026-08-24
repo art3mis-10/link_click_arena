@@ -678,28 +678,167 @@
     style="display:none;"
   >
 
-    <div id="hud-role">
-      ROLE: UNASSIGNED
+    <!-- TOP LEFT: TITLE ONLY -->
+    <div class="arena-title-hud">
+
+      <div id="hud-role">
+        ROLE: UNASSIGNED
+      </div>
+
+      <div class="combat-health-row">
+
+        HP
+
+        <strong id="combat-hp">
+          850 / 850
+        </strong>
+
+      </div>
+
+      <div
+        id="stun-status"
+        class="combat-state-message"
+      ></div>
+
     </div>
 
-    <div id="instructions">
-      WASD: Move | SHIFT: Lock Mouse to Turn Camera
+
+    <!-- BOTTOM RIGHT: ABILITIES + CONTROLS -->
+    <div class="combat-controls-hud">
+
+      <div class="ability-list">
+
+        <div class="ability-row">
+
+          <div class="ability-key">
+            SPACE
+          </div>
+
+          <div class="ability-copy">
+
+            <strong>
+              PUNCH
+            </strong>
+
+            <span>
+              Basic Attack
+            </span>
+
+          </div>
+
+          <div
+            class="ability-status"
+            id="basic-status"
+          >
+            READY
+          </div>
+
+        </div>
+
+
+        <div class="ability-row">
+
+          <div class="ability-key">
+            Q
+          </div>
+
+          <div class="ability-copy">
+
+            <strong>
+              CONTROL
+            </strong>
+
+            <span>
+              Ability
+            </span>
+
+          </div>
+
+          <div
+            class="ability-status"
+            id="control-status"
+          >
+            READY
+          </div>
+
+        </div>
+
+
+        <div class="ability-row">
+
+          <div class="ability-key">
+            E
+          </div>
+
+          <div class="ability-copy">
+
+            <strong>
+              STRENGTHEN
+            </strong>
+
+            <span>
+              Ultimate
+            </span>
+
+          </div>
+
+          <div
+            class="ability-status"
+            id="strengthen-status"
+          >
+            READY
+          </div>
+
+        </div>
+
+      </div>
+
+
+      <div
+        id="instructions"
+        class="arena-instructions"
+      >
+        WASD Move • SHIFT Camera • SPACE Punch • Q Control • E Strengthen
+      </div>
+
+
+      <div
+        id="spectator-controls"
+        class="spectator-panel"
+        style="display:none;"
+      >
+
+        <strong>
+          SPECTATOR MODE
+        </strong>
+
+        <div id="spectator-target">
+          SPECTATING
+        </div>
+
+        <span>
+          A / ← Previous • D / → Next
+        </span>
+
+      </div>
+
+
+      <button
+        class="btn action-btn-danger abort-button"
+        onclick="leaveGame()"
+      >
+        ABORT MISSION
+      </button>
+
     </div>
 
-    <button
-      class="btn action-btn-danger"
-      onclick="leaveGame()"
-      style="
-        margin-top:15px;
-        pointer-events:auto;
-      "
-    >
-      ABORT MISSION
-    </button>
+
+    <div
+      id="match-result"
+      class="match-result"
+    ></div>
 
   </div>
-
-
   <canvas id="game-canvas"></canvas>
 
 
