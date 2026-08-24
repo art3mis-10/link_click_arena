@@ -212,16 +212,32 @@ app.get('/api/friends/list', async (req, res) => {
 
 app.get('/api/friends/search', async (req, res) => {
   const { query, username } = req.query;
-  if (!query || query.trim() === '') return res.json([]);
+
+  if (!query || query.trim() === '') {
+    return res.json([]);
+  }
 
   try {
-    const matches = await User.find({
-      username: { $regex: query, $options: 'i' },
-      username: { $ne: username }
-    }).select('username avatar').limit(10);
+    const searchedUsername = query.trim();
 
-    res.json(matches.map(u => ({ username: u.username, avatar: u.avatar || '' })));
+    // Exact username match only
+    const user = await User.findOne({
+      username: searchedUsername
+    }).select('username avatar');
+
+    // No exact match, or user searched for themselves
+    if (!user || user.username === username) {
+      return res.json([]);
+    }
+
+    res.json([
+      {
+        username: user.username,
+        avatar: user.avatar || ''
+      }
+    ]);
   } catch (err) {
+    console.error('Friend search error:', err);
     res.status(500).json({ message: 'Failed to search users' });
   }
 });

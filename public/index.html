@@ -113,23 +113,66 @@
     <div class="lobby-header">
       <h1>SQUAD LOBBY</h1>
     </div>
-  
+
     <div class="team-container">
+
+      <!-- PLAYER 1 / HOST -->
       <div class="team-slot filled">
-        <div class="player-avatar" id="slot1-avatar">P1</div>
-        <h3 id="slot1-name" style="color: #66fcf1;">Agent_01</h3>
-        <p style="font-size: 12px; color: #888;">PARTY LEADER</p>
+        <div class="player-avatar" id="slot1-pfp">?</div>
+
+        <h3 id="slot1-name" style="color: #66fcf1;">
+          Player
+        </h3>
+
+        <p style="font-size: 12px; color: #888;">
+          PARTY LEADER
+        </p>
       </div>
+
+      <!-- PLAYER 2 / GUEST -->
       <div class="team-slot">
-        <div style="font-size: 40px; color: #45a29e;">+</div>
-        <h3>EMPTY SLOT</h3>
-        <p style="font-size: 12px; text-align: center;">Invite Friend<br>(Coming Soon)</p>
+        <div class="player-avatar" id="slot2-pfp">
+          <span style="font-size: 32px; color: #45a29e;">+</span>
+        </div>
+
+        <h3 id="slot2-name" style="color: #a0a5ab;">
+          EMPTY SLOT
+        </h3>
+
+        <p style="font-size: 12px; color: #888;">
+          SQUAD MEMBER
+        </p>
       </div>
+
     </div>
-  
-    <button class="btn bottom-left secondary-btn" onclick="showScreen('lobby-screen')">BACK TO LOBBY</button>
-    <!-- CHANGED: Calls hostStartGame() instead of goToCharScreen() to prevent the socket loop -->
-    <button class="btn bottom-right" onclick="hostStartGame()">START GAME</button>
+
+    <!-- ONLINE FRIENDS / INVITE LIST -->
+    <div
+      id="squad-friends-sidebar"
+      style="
+        position: absolute;
+        right: 40px;
+        top: 120px;
+        width: 230px;
+        max-height: 430px;
+        overflow-y: auto;
+      "
+    ></div>
+
+    <button
+      class="btn bottom-left secondary-btn"
+      onclick="showScreen('lobby-screen')"
+    >
+      BACK TO LOBBY
+    </button>
+
+    <button
+      class="btn bottom-right"
+      id="start-battle-btn"
+      onclick="hostStartGame()"
+    >
+      START GAME
+    </button>
   </div>
 
   <!-- 6. CHARACTER SELECTION SCREEN -->
