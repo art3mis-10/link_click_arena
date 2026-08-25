@@ -1,25 +1,51 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
+
   <meta charset="UTF-8">
-  <title>Link Click 2.5D Arena</title>
 
-  <link rel="stylesheet" href="/css/style.css">
+  <title>
+    Link Click 2.5D Arena
+  </title>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-  <script src="/socket.io/socket.io.js"></script>
+
+  <link
+    rel="stylesheet"
+    href="/css/style.css"
+  >
+
+
+  <script
+    src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"
+  ></script>
+
+
+  <script
+    src="/socket.io/socket.io.js"
+  ></script>
+
 </head>
+
 
 <body>
 
-  <!-- LOGIN -->
-  <div id="login-screen" class="screen">
+
+  <!-- ==================================================
+       LOGIN
+  =================================================== -->
+
+  <div
+    id="login-screen"
+    class="screen"
+  >
 
     <div class="login-box">
 
       <div class="login-title">
         LINK CLICK
       </div>
+
 
       <input
         type="text"
@@ -28,6 +54,7 @@
         placeholder="Username..."
       >
 
+
       <input
         type="password"
         id="password"
@@ -35,7 +62,14 @@
         placeholder="Password..."
       >
 
-      <div style="display:flex; gap:10px; width:100%;">
+
+      <div
+        style="
+          display:flex;
+          gap:10px;
+          width:100%;
+        "
+      >
 
         <button
           class="btn"
@@ -44,6 +78,7 @@
         >
           LOGIN
         </button>
+
 
         <button
           class="btn secondary-btn"
@@ -54,6 +89,7 @@
         </button>
 
       </div>
+
 
       <p
         id="auth-error"
@@ -70,7 +106,10 @@
   </div>
 
 
-  <!-- MAIN LOBBY -->
+  <!-- ==================================================
+       MAIN LOBBY
+  =================================================== -->
+
   <div
     id="lobby-screen"
     class="screen"
@@ -78,7 +117,11 @@
   >
 
     <div class="lobby-header">
-      <h1>TIME AGENT LOBBY</h1>
+
+      <h1>
+        TIME AGENT LOBBY
+      </h1>
+
     </div>
 
 
@@ -95,6 +138,7 @@
         >
           ?
         </div>
+
 
         <span
           id="top-username"
@@ -125,6 +169,7 @@
         PVP ARENA
       </button>
 
+
       <button
         class="btn mode-btn"
         onclick="openMode('match')"
@@ -137,7 +182,10 @@
   </div>
 
 
-  <!-- PROFILE -->
+  <!-- ==================================================
+       PROFILE
+  =================================================== -->
+
   <div
     id="profile-screen"
     class="screen"
@@ -173,11 +221,14 @@
             ?
           </div>
 
+
           <div
             class="pfp-overlay"
             id="pfp-overlay"
           >
-            <span>Upload</span>
+            <span>
+              Upload
+            </span>
           </div>
 
         </div>
@@ -197,6 +248,7 @@
           <h2 id="profile-page-username">
             Player Name
           </h2>
+
 
           <span
             class="status-badge"
@@ -221,6 +273,7 @@
             0
           </span>
 
+
           <span class="stat-label">
             Matches Played
           </span>
@@ -237,6 +290,7 @@
             0
           </span>
 
+
           <span class="stat-label">
             Friends
           </span>
@@ -246,14 +300,19 @@
       </div>
 
 
-      <div id="profile-action-container"></div>
+      <div
+        id="profile-action-container"
+      ></div>
 
     </div>
 
   </div>
 
 
-  <!-- FRIENDS -->
+  <!-- ==================================================
+       FRIENDS
+  =================================================== -->
+
   <div
     id="friends-screen"
     class="screen"
@@ -269,7 +328,10 @@
         ✕
       </button>
 
-      <h2>FRIENDS NETWORK</h2>
+
+      <h2>
+        FRIENDS NETWORK
+      </h2>
 
 
       <div class="tab-header">
@@ -316,10 +378,12 @@
         id="tab-content-list"
         class="tab-content active"
       >
+
         <div
           id="friends-list"
           class="scroll-list"
         ></div>
+
       </div>
 
 
@@ -342,9 +406,12 @@
             "
           >
 
+
           <button
             class="btn"
-            style="padding:10px 20px;"
+            style="
+              padding:10px 20px;
+            "
             onclick="searchUsers()"
           >
             SEARCH
@@ -378,7 +445,10 @@
   </div>
 
 
-  <!-- SQUAD LOBBY -->
+  <!-- ==================================================
+       SQUAD LOBBY
+  =================================================== -->
+
   <div
     id="team-screen"
     class="screen"
@@ -393,6 +463,7 @@
           SQUAD LOBBY
         </h1>
 
+
         <div
           id="squad-capacity"
           class="squad-capacity"
@@ -405,10 +476,16 @@
     </div>
 
 
-    <div class="team-container four-player-team-container">
+    <div
+      class="
+        team-container
+        four-player-team-container
+      "
+    >
 
 
       <!-- SLOT 1 -->
+
       <div
         class="team-slot"
         id="team-slot-1"
@@ -421,9 +498,11 @@
           ?
         </div>
 
+
         <h3 id="slot1-name">
           Player
         </h3>
+
 
         <p id="slot1-role">
           PARTY LEADER
@@ -433,6 +512,7 @@
 
 
       <!-- SLOT 2 -->
+
       <div
         class="team-slot"
         id="team-slot-2"
@@ -442,12 +522,18 @@
           class="player-avatar"
           id="slot2-pfp"
         >
-          <span class="plus-symbol">+</span>
+
+          <span class="plus-symbol">
+            +
+          </span>
+
         </div>
+
 
         <h3 id="slot2-name">
           EMPTY SLOT
         </h3>
+
 
         <p id="slot2-role">
           INVITE FRIEND
@@ -457,6 +543,7 @@
 
 
       <!-- SLOT 3 -->
+
       <div
         class="team-slot"
         id="team-slot-3"
@@ -466,12 +553,18 @@
           class="player-avatar"
           id="slot3-pfp"
         >
-          <span class="plus-symbol">+</span>
+
+          <span class="plus-symbol">
+            +
+          </span>
+
         </div>
+
 
         <h3 id="slot3-name">
           EMPTY SLOT
         </h3>
+
 
         <p id="slot3-role">
           INVITE FRIEND
@@ -481,6 +574,7 @@
 
 
       <!-- SLOT 4 -->
+
       <div
         class="team-slot"
         id="team-slot-4"
@@ -490,12 +584,18 @@
           class="player-avatar"
           id="slot4-pfp"
         >
-          <span class="plus-symbol">+</span>
+
+          <span class="plus-symbol">
+            +
+          </span>
+
         </div>
+
 
         <h3 id="slot4-name">
           EMPTY SLOT
         </h3>
+
 
         <p id="slot4-role">
           INVITE FRIEND
@@ -508,9 +608,14 @@
 
     <aside class="squad-sidebar-panel">
 
-      <h3>INVITE FRIENDS</h3>
+      <h3>
+        INVITE FRIENDS
+      </h3>
 
-      <div id="squad-friends-sidebar"></div>
+
+      <div
+        id="squad-friends-sidebar"
+      ></div>
 
     </aside>
 
@@ -534,7 +639,10 @@
   </div>
 
 
-  <!-- CHARACTER SELECT -->
+  <!-- ==================================================
+       CHARACTER SELECT
+  =================================================== -->
+
   <div
     id="char-screen"
     class="screen"
@@ -552,7 +660,10 @@
           MODE
         </div>
 
-        <h1>SELECT YOUR AGENT</h1>
+
+        <h1>
+          SELECT YOUR AGENT
+        </h1>
 
       </div>
 
@@ -576,6 +687,7 @@
           <span class="preview-divider">
             |
           </span>
+
 
           <span id="teammate-pick-display">
             Teammate: Selecting...
@@ -606,19 +718,27 @@
     <div class="char-container">
 
 
+      <!-- CHENG -->
+
       <div
         class="card"
         id="card-cheng"
         onclick="selectCharacter('cheng_xiaoshi')"
       >
 
-        <h3>CHENG XIAOSHI</h3>
+        <h3>
+          CHENG XIAOSHI
+        </h3>
+
 
         <p>
+
           <strong>
             ROLE: COMBATER
           </strong>
+
         </p>
+
 
         <p>
           Enters photo dimensions directly.
@@ -628,19 +748,27 @@
       </div>
 
 
+      <!-- LU GUANG -->
+
       <div
         class="card"
         id="card-lu"
         onclick="selectCharacter('lu_guang')"
       >
 
-        <h3>LU GUANG</h3>
+        <h3>
+          LU GUANG
+        </h3>
+
 
         <p>
+
           <strong>
             ROLE: OBSERVER
           </strong>
+
         </p>
+
 
         <p>
           Tracks target trajectories across the
@@ -672,28 +800,36 @@
   </div>
 
 
-  <!-- ARENA HUD -->
+  <!-- ==================================================
+       ARENA HUD
+  =================================================== -->
+
   <div
     id="ui-layer"
     style="display:none;"
   >
 
-    <!-- TOP LEFT: TITLE ONLY -->
+
+    <!-- TOP LEFT -->
+
     <div class="arena-title-hud">
 
       <div id="hud-role">
         ROLE: UNASSIGNED
       </div>
 
+
       <div class="combat-health-row">
 
         HP
+
 
         <strong id="combat-hp">
           850 / 850
         </strong>
 
       </div>
+
 
       <div
         id="stun-status"
@@ -703,10 +839,15 @@
     </div>
 
 
-    <!-- BOTTOM RIGHT: ABILITIES + CONTROLS -->
+    <!-- BOTTOM RIGHT -->
+
     <div class="combat-controls-hud">
 
+
       <div class="ability-list">
+
+
+        <!-- SPACE -->
 
         <div class="ability-row">
 
@@ -714,17 +855,20 @@
             SPACE
           </div>
 
+
           <div class="ability-copy">
 
-            <strong>
+            <strong id="basic-name">
               PUNCH
             </strong>
+
 
             <span>
               Basic Attack
             </span>
 
           </div>
+
 
           <div
             class="ability-status"
@@ -736,23 +880,28 @@
         </div>
 
 
+        <!-- Q -->
+
         <div class="ability-row">
 
           <div class="ability-key">
             Q
           </div>
 
+
           <div class="ability-copy">
 
-            <strong>
+            <strong id="ability-name">
               CONTROL
             </strong>
+
 
             <span>
               Ability
             </span>
 
           </div>
+
 
           <div
             class="ability-status"
@@ -764,23 +913,28 @@
         </div>
 
 
+        <!-- E -->
+
         <div class="ability-row">
 
           <div class="ability-key">
             E
           </div>
 
+
           <div class="ability-copy">
 
-            <strong>
+            <strong id="ult-name">
               STRENGTHEN
             </strong>
+
 
             <span>
               Ultimate
             </span>
 
           </div>
+
 
           <div
             class="ability-status"
@@ -812,9 +966,11 @@
           SPECTATOR MODE
         </strong>
 
+
         <div id="spectator-target">
           SPECTATING
         </div>
+
 
         <span>
           A / ← Previous • D / → Next
@@ -824,7 +980,11 @@
 
 
       <button
-        class="btn action-btn-danger abort-button"
+        class="
+          btn
+          action-btn-danger
+          abort-button
+        "
         onclick="leaveGame()"
       >
         ABORT MISSION
@@ -839,14 +999,26 @@
     ></div>
 
   </div>
-  <canvas id="game-canvas"></canvas>
 
 
-  <!-- IMPORTANT: LOAD IN THIS ORDER -->
+  <canvas
+    id="game-canvas"
+  ></canvas>
+
+
+  <!-- ==================================================
+       JS — LOAD IN THIS ORDER
+  =================================================== -->
+
   <script src="/js/app.js"></script>
+
   <script src="/js/social.js"></script>
+
   <script src="/js/squad.js"></script>
+
   <script src="/js/arena.js"></script>
 
+
 </body>
+
 </html>

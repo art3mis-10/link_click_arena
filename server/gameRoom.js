@@ -184,79 +184,109 @@ class GameManager {
   }
 
 
-  initializeCombat(id) {
-
+  initializeCombat(
+    id,
+    maxHp
+  ) {
+  
     const player =
       this.players[id];
-
-
+  
+  
     if (!player) {
-
+  
       return null;
     }
-
-
+  
+  
     const now =
       Date.now();
-
-
-    /*
-      Cheng is 850 HP.
-
-      Other unfinished characters also get
-      a temporary 850-HP hittable shell so
-      PvP testing does not break.
-    */
-    const maxHp =
-      850;
-
-
+  
+  
     player.combat = {
-
+  
       maxHp,
-
+  
       hp:
         maxHp,
-
+  
       alive:
         true,
-
+  
+  
+      // -----------------------------
+      // DAMAGE / REGEN
+      // -----------------------------
+  
       lastDamageAt:
         0,
-
+  
       nextRegenAt:
         now +
         10000,
-
+  
+  
+      // -----------------------------
+      // STATUS
+      // -----------------------------
+  
       stunnedUntil:
         0,
-
+  
+  
+      // -----------------------------
+      // CHENG SPEED BUFF
+      // -----------------------------
+  
       speedBuffUntil:
         0,
-
+  
+  
+      // -----------------------------
+      // ULT
+      // -----------------------------
+  
       strengthenUntil:
         0,
-
+  
+  
+      // -----------------------------
+      // COOLDOWNS
+      // -----------------------------
+  
       basicReadyAt:
         0,
-
+  
       controlReadyAt:
         0,
-
+  
       strengthenReadyAt:
         0,
-
+  
+  
+      // -----------------------------
+      // LU GUANG SHIELD
+      // -----------------------------
+  
+      shieldHp:
+        0,
+  
+      shieldMaxHp:
+        0,
+  
+      shieldUntil:
+        0,
+  
+  
+      // -----------------------------
+      // MOVEMENT VALIDATION
+      // -----------------------------
+  
       lastMoveAt:
-        now,
-
-      lastMoveX:
-        player.x,
-
-      lastMoveZ:
-        player.z
+        now
     };
-
-
+  
+  
     return player.combat;
   }
 }

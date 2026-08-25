@@ -1,43 +1,136 @@
-const crypto = require('crypto');
+const crypto =
+  require('crypto');
+
+
+const ChengXiaoshi =
+  require(
+    './characters/chengXiaoshi'
+  );
+
+
+const LuGuang =
+  require(
+    './characters/luGuang'
+  );
+
 
 class CombatManager {
 
   constructor({
+
     io,
+
     gameManager,
+
     onlineUsers,
+
     getSquadForUser,
+
     roomForSquad,
+
     onRoundEnd
   }) {
 
-    this.io = io;
-    this.gameManager = gameManager;
-    this.onlineUsers = onlineUsers;
-    this.getSquadForUser = getSquadForUser;
-    this.roomForSquad = roomForSquad;
-    this.onRoundEnd = onRoundEnd;
+    this.io =
+      io;
 
-    this.projectiles = new Map();
 
-    this.roundEndTimers = new Map();
+    this.gameManager =
+      gameManager;
 
-    // 20 server combat ticks per second.
-    this.tickHandle = setInterval(
-      () => this.tick(),
-      50
+
+    this.onlineUsers =
+      onlineUsers;
+
+
+    this.getSquadForUser =
+      getSquadForUser;
+
+
+    this.roomForSquad =
+      roomForSquad;
+
+
+    this.onRoundEnd =
+      onRoundEnd;
+
+
+    /*
+      CHARACTER LIBRARY
+
+      Later just add:
+
+      qiao_ling: QiaoLing
+      vein: Vein
+      etc.
+    */
+
+    this.characters = {
+
+      cheng_xiaoshi:
+        ChengXiaoshi,
+
+      lu_guang:
+        LuGuang
+    };
+
+
+    this.projectiles =
+      new Map();
+
+
+    this.roundEndTimers =
+      new Map();
+
+
+    /*
+      20 server combat ticks/sec.
+    */
+
+    this.tickHandle =
+      setInterval(
+        () =>
+          this.tick(),
+        50
+      );
+  }
+
+
+  // =====================================================
+  // CHARACTER LOOKUP
+  // =====================================================
+
+  getCharacterKit(
+    player
+  ) {
+
+    if (!player) {
+
+      return null;
+    }
+
+
+    return (
+      this.characters[
+        player.character
+      ] ||
+      null
     );
   }
 
 
   // =====================================================
-  // SOCKET INPUTS
+  // SOCKET CONTROLS
   // =====================================================
 
   registerSocket(
     socket,
     getAuthenticatedUser
   ) {
+
+    /*
+      SPACE
+    */
 
     socket.on(
       'combat_basic_input',
@@ -46,15 +139,25 @@ class CombatManager {
         const username =
           getAuthenticatedUser();
 
+
         if (username) {
-          this.basicAttack(
+
+          this.routeAction(
+
             socket,
-            username
+
+            username,
+
+            'basicAttack'
           );
         }
       }
     );
 
+
+    /*
+      Q
+    */
 
     socket.on(
       'combat_control_input',
@@ -63,15 +166,25 @@ class CombatManager {
         const username =
           getAuthenticatedUser();
 
+
         if (username) {
-          this.useControl(
+
+          this.routeAction(
+
             socket,
-            username
+
+            username,
+
+            'ability'
           );
         }
       }
     );
 
+
+    /*
+      E
+    */
 
     socket.on(
       'combat_strengthen_input',
@@ -80,10 +193,16 @@ class CombatManager {
         const username =
           getAuthenticatedUser();
 
+
         if (username) {
-          this.useStrengthen(
+
+          this.routeAction(
+
             socket,
-            username
+
+            username,
+
+            'ult'
           );
         }
       }
@@ -97,7 +216,9 @@ class CombatManager {
         const username =
           getAuthenticatedUser();
 
+
         if (username) {
+
           this.emitSelfState(
             socket.id
           );
@@ -108,10 +229,90 @@ class CombatManager {
 
 
   // =====================================================
-  // BEGIN COMBAT
+  // SEND INPUT TO CHARACTER FILE
   // =====================================================
 
-  startForSquad(squad) {
+  routeAction(
+    socket,
+    username,
+    action
+  ) {
+
+    const squad =
+      this.getSquadForUser(
+        username
+      );
+
+
+    if (
+      !squad ||
+      squad.mode !== 'pvp' ||
+      squad.phase !== 'arena'
+    ) {
+
+      return;
+    }
+
+
+    const state =
+      this.getCombat(
+        socket.id
+      );
+
+
+    if (!state) {
+
+      return;
+    }
+
+
+    const {
+      player,
+      combat
+    } =
+      state;
+
+
+    const kit =
+      this.getCharacterKit(
+        player
+      );
+
+
+    if (
+      !kit ||
+      typeof kit[action] !==
+        'function'
+    ) {
+
+      return;
+    }
+
+
+    kit[action](
+
+      this,
+
+      socket,
+
+      username,
+
+      squad,
+
+      player,
+
+      combat
+    );
+  }
+
+
+  // =====================================================
+  // START ROUND
+  // =====================================================
+
+  startForSquad(
+    squad
+  ) {
 
     const now =
       Date.now();
@@ -129,6 +330,7 @@ class CombatManager {
 
 
       if (!socketId) {
+
         continue;
       }
 
@@ -141,26 +343,35 @@ class CombatManager {
 
 
       if (!player) {
+
         continue;
       }
 
 
-      this.gameManager
-        .initializeCombat(
-          socketId
+      const kit =
+        this.getCharacterKit(
+          player
         );
 
 
-      player.combat.lastMoveAt =
-        now;
+      const maxHp =
+        kit
+          ? kit.maxHp
+          : 600;
 
 
-      player.combat.lastMoveX =
-        player.x;
+      this.gameManager
+        .initializeCombat(
+
+          socketId,
+
+          maxHp
+        );
 
 
-      player.combat.lastMoveZ =
-        player.z;
+      player.combat
+        .lastMoveAt =
+          now;
 
 
       this.emitSelfState(
@@ -171,10 +382,12 @@ class CombatManager {
 
 
   // =====================================================
-  // PUBLIC PLAYER DATA
+  // PUBLIC PLAYER STATE
   // =====================================================
 
-  publicPlayer(player) {
+  publicPlayer(
+    player
+  ) {
 
     return {
 
@@ -197,17 +410,33 @@ class CombatManager {
         player.rotation,
 
       pitch:
-        player.pitch || 0,
+        player.pitch ||
+        0,
 
       hp:
         player.combat
           ? player.combat.hp
-          : 850,
+          : 0,
 
       maxHp:
         player.combat
           ? player.combat.maxHp
-          : 850,
+          : 0,
+
+      shieldHp:
+        player.combat
+          ? player.combat.shieldHp
+          : 0,
+
+      shieldMaxHp:
+        player.combat
+          ? player.combat.shieldMaxHp
+          : 0,
+
+      shieldUntil:
+        player.combat
+          ? player.combat.shieldUntil
+          : 0,
 
       alive:
         player.combat
@@ -218,10 +447,12 @@ class CombatManager {
 
 
   // =====================================================
-  // HELPERS
+  // COMBAT LOOKUP
   // =====================================================
 
-  getCombat(socketId) {
+  getCombat(
+    socketId
+  ) {
 
     const player =
       this.gameManager
@@ -249,16 +480,22 @@ class CombatManager {
   }
 
 
-  canUseChengAction(
+  // =====================================================
+  // CAN PLAYER ACT?
+  // =====================================================
+
+  canAct(
     player,
     combat,
-    now = Date.now()
+    now =
+      Date.now()
   ) {
 
     return (
 
-      player.character ===
-        'cheng_xiaoshi' &&
+      Boolean(player) &&
+
+      Boolean(combat) &&
 
       combat.alive &&
 
@@ -268,54 +505,58 @@ class CombatManager {
   }
 
 
+  // =====================================================
+  // MOVEMENT MULTIPLIER
+  // =====================================================
+
   movementMultiplier(
+    player,
     combat,
-    now = Date.now()
+    now =
+      Date.now()
   ) {
 
-    let multiplier =
-      1;
+    const kit =
+      this.getCharacterKit(
+        player
+      );
 
 
-    // Control hit buff
     if (
-      now <
-      combat.speedBuffUntil
+      kit &&
+      typeof kit
+        .movementMultiplier ===
+        'function'
     ) {
 
-      multiplier +=
-        0.50;
+      return kit
+        .movementMultiplier(
+          combat,
+          now
+        );
     }
 
 
-    // Strengthen buff
-    if (
-      now <
-      combat.strengthenUntil
-    ) {
-
-      multiplier +=
-        0.15;
-    }
-
-
-    return multiplier;
+    return 1;
   }
 
 
   // =====================================================
-  // SEND PRIVATE PLAYER STATE
+  // PRIVATE STATE
   // =====================================================
 
-  emitSelfState(socketId) {
+  emitSelfState(
+    socketId
+  ) {
 
-    const data =
+    const state =
       this.getCombat(
         socketId
       );
 
 
-    if (!data) {
+    if (!state) {
+
       return;
     }
 
@@ -327,11 +568,14 @@ class CombatManager {
     const {
       player,
       combat
-    } = data;
+    } =
+      state;
 
 
     this.io
-      .to(socketId)
+      .to(
+        socketId
+      )
       .emit(
         'combat_self_state',
         {
@@ -367,14 +611,23 @@ class CombatManager {
             combat.controlReadyAt,
 
           strengthenReadyAt:
-            combat.strengthenReadyAt
+            combat.strengthenReadyAt,
+
+          shieldHp:
+            combat.shieldHp,
+
+          shieldMaxHp:
+            combat.shieldMaxHp,
+
+          shieldUntil:
+            combat.shieldUntil
         }
       );
   }
 
 
   // =====================================================
-  // SERVER-AUTHORITATIVE MOVEMENT LIMIT
+  // MOVEMENT VALIDATION
   // =====================================================
 
   validateMovement(
@@ -408,14 +661,14 @@ class CombatManager {
     const {
       player,
       combat
-    } = state;
+    } =
+      state;
 
 
     const now =
       Date.now();
 
 
-    // Dead/stunned players cannot move.
     if (
       !combat.alive ||
       now <
@@ -436,7 +689,8 @@ class CombatManager {
             player.rotation,
 
           pitch:
-            player.pitch || 0
+            player.pitch ||
+            0
         }
       );
 
@@ -446,11 +700,15 @@ class CombatManager {
 
 
     const requestedX =
-      Number(data.x);
+      Number(
+        data.x
+      );
 
 
     const requestedZ =
-      Number(data.z);
+      Number(
+        data.z
+      );
 
 
     if (
@@ -477,21 +735,33 @@ class CombatManager {
         0.001,
 
         Math.min(
+
           0.25,
-          (now - lastAt) /
-            1000
+
+          (
+            now -
+            lastAt
+          ) /
+          1000
         )
       );
 
 
-    // Normal movement = 9 world units/sec.
     const maxDistance =
+
       9 *
+
       this.movementMultiplier(
+
+        player,
+
         combat,
+
         now
       ) *
+
       dt +
+
       0.45;
 
 
@@ -547,7 +817,8 @@ class CombatManager {
           -24,
           Math.min(
             24,
-            player.x + dx
+            player.x +
+            dx
           )
         ),
 
@@ -556,7 +827,8 @@ class CombatManager {
           -24,
           Math.min(
             24,
-            player.z + dz
+            player.z +
+            dz
           )
         ),
 
@@ -580,28 +852,23 @@ class CombatManager {
           ? Number(
               data.pitch
             )
-          : player.pitch || 0
+          : player.pitch ||
+            0
     };
 
 
     const updated =
       this.gameManager
         .updatePlayerPosition(
+
           socket.id,
+
           accepted
         );
 
 
     combat.lastMoveAt =
       now;
-
-
-    combat.lastMoveX =
-      updated.x;
-
-
-    combat.lastMoveZ =
-      updated.z;
 
 
     if (corrected) {
@@ -618,158 +885,7 @@ class CombatManager {
 
 
   // =====================================================
-  // SPACE — PUNCH
-  // =====================================================
-
-  basicAttack(
-    socket,
-    username
-  ) {
-
-    const squad =
-      this.getSquadForUser(
-        username
-      );
-
-
-    const state =
-      this.getCombat(
-        socket.id
-      );
-
-
-    if (
-      !squad ||
-      squad.mode !== 'pvp' ||
-      squad.phase !== 'arena' ||
-      !state
-    ) {
-
-      return;
-    }
-
-
-    const now =
-      Date.now();
-
-
-    const {
-      player,
-      combat
-    } = state;
-
-
-    if (
-      !this.canUseChengAction(
-        player,
-        combat,
-        now
-      )
-    ) {
-
-      return;
-    }
-
-
-    if (
-      now <
-      combat.basicReadyAt
-    ) {
-
-      return;
-    }
-
-
-    const strengthened =
-      now <
-      combat.strengthenUntil;
-
-
-    // Normal = 80.
-    // Strengthen = 100.
-    const damage =
-      strengthened
-        ? 100
-        : 80;
-
-
-    // Normal = 1/sec.
-    // Strengthen = 2/sec.
-    const cooldownMs =
-      strengthened
-        ? 500
-        : 1000;
-
-
-    combat.basicReadyAt =
-      now +
-      cooldownMs;
-
-
-    // Everyone sees the punch animation.
-    this.io
-      .to(
-        this.roomForSquad(
-          squad
-        )
-      )
-      .emit(
-        'combat_basic_attack',
-        {
-
-          attackerId:
-            player.id,
-
-          serverNow:
-            now,
-
-          damage
-        }
-      );
-
-
-    /*
-      Punch range:
-      2.4 world units.
-
-      Arena is 50 x 50,
-      so 2.4 is deliberately close melee.
-    */
-    const target =
-      this.findMeleeTarget(
-    
-      squad,
-    
-      player,
-    
-      4,
-    
-      0
-    );
-
-    if (target) {
-
-      this.applyDamage(
-
-        squad,
-
-        target,
-
-        damage,
-
-        player.id
-      );
-    }
-
-
-    this.emitSelfState(
-      socket.id
-    );
-  }
-
-
-  // =====================================================
-  // MELEE HIT DETECTION
+  // FRONT MELEE TARGET
   // =====================================================
 
   findMeleeTarget(
@@ -779,7 +895,6 @@ class CombatManager {
     minimumDot
   ) {
 
-    // Three.js forward direction is local -Z.
     const forwardX =
       -Math.sin(
         attacker.rotation ||
@@ -859,7 +974,8 @@ class CombatManager {
 
       if (
         distance <= 0 ||
-        distance > range
+        distance >
+          range
       ) {
 
         continue;
@@ -910,101 +1026,102 @@ class CombatManager {
 
 
   // =====================================================
-  // Q — CONTROL
+  // NEAREST TARGET
   // =====================================================
 
-  useControl(
-    socket,
-    username
+  findNearestTarget(
+    squad,
+    attacker,
+    range
   ) {
 
-    const squad =
-      this.getSquadForUser(
-        username
-      );
+    let closest =
+      null;
 
 
-    const state =
-      this.getCombat(
-        socket.id
-      );
+    let closestDistance =
+      Infinity;
 
 
-    if (
-      !squad ||
-      squad.mode !== 'pvp' ||
-      squad.phase !== 'arena' ||
-      !state
+    for (
+      const username
+      of squad.members
     ) {
 
-      return;
+      const socketId =
+        this.onlineUsers.get(
+          username
+        );
+
+
+      if (
+        !socketId ||
+        socketId ===
+          attacker.id
+      ) {
+
+        continue;
+      }
+
+
+      const target =
+        this.gameManager
+          .getPlayer(
+            socketId
+          );
+
+
+      if (
+        !target ||
+        !target.combat ||
+        !target.combat.alive
+      ) {
+
+        continue;
+      }
+
+
+      const distance =
+        Math.hypot(
+
+          target.x -
+          attacker.x,
+
+          target.z -
+          attacker.z
+        );
+
+
+      if (
+        distance <= range &&
+        distance <
+          closestDistance
+      ) {
+
+        closest =
+          target;
+
+
+        closestDistance =
+          distance;
+      }
     }
 
+
+    return closest;
+  }
+
+
+  // =====================================================
+  // SPAWN PROJECTILE
+  // =====================================================
+
+  spawnProjectile(
+    options
+  ) {
 
     const now =
       Date.now();
-
-
-    const {
-      player,
-      combat
-    } = state;
-
-
-    if (
-      !this.canUseChengAction(
-        player,
-        combat,
-        now
-      )
-    ) {
-
-      return;
-    }
-
-
-    if (
-      now <
-      combat.controlReadyAt
-    ) {
-
-      return;
-    }
-
-
-    // Cooldown begins IMMEDIATELY upon throw.
-    combat.controlReadyAt =
-      now +
-      10000;
-    /*
-        Control always resets Cheng's basic attack cooldown as soon
-        as the projectile is thrown, whether or not it hits.
-    */
-    combat.basicReadyAt =
-        0;
-
-    socket.emit(
-        'combat_basic_reset',
-        {
-            serverNow:
-            now
-        }
-    );
-
-    const direction = {
-
-      x:
-        -Math.sin(
-          player.rotation ||
-          0
-        ),
-
-      z:
-        -Math.cos(
-          player.rotation ||
-          0
-        )
-    };
 
 
     const projectile = {
@@ -1012,74 +1129,38 @@ class CombatManager {
       id:
         crypto.randomUUID(),
 
-      squad,
-
-      ownerId:
-        player.id,
-
-      ownerName:
-        player.name,
-
-      x:
-        player.x +
-        direction.x *
-        1.0,
-
-      z:
-        player.z +
-        direction.z *
-        1.0,
-
-      startX:
-        player.x +
-        direction.x *
-        1.0,
-
-      startZ:
-        player.z +
-        direction.z *
-        1.0,
-
-      direction,
-
-      // 16 units/sec.
-      speed:
-        60,
-
-      // Mid-range.
-      maxRange:
-        20,
-
-      radius:
-        0.75,
-
-      damage:
-        50,
-
       spawnedAt:
         now,
 
       lastTickAt:
-        now
+        now,
+
+      startX:
+        options.x,
+
+      startZ:
+        options.z,
+
+      maxLifetime:
+        options.maxLifetime ||
+        2000,
+
+      ...options
     };
 
 
     this.projectiles.set(
+
       projectile.id,
+
       projectile
     );
 
 
-    /*
-      Every client draws the projectile.
-
-      Server remains responsible
-      for real collision.
-    */
     this.io
       .to(
         this.roomForSquad(
-          squad
+          projectile.squad
         )
       )
       .emit(
@@ -1089,8 +1170,15 @@ class CombatManager {
           id:
             projectile.id,
 
+          kind:
+            projectile.kind,
+
           ownerId:
             projectile.ownerId,
+
+          targetId:
+            projectile.targetId ||
+            null,
 
           x:
             projectile.x,
@@ -1107,123 +1195,28 @@ class CombatManager {
           maxRange:
             projectile.maxRange,
 
+          homing:
+            Boolean(
+              projectile.homing
+            ),
+
+          strengthened:
+            Boolean(
+              projectile.strengthened
+            ),
+
           spawnedAt:
             projectile.spawnedAt
         }
       );
 
 
-    this.emitSelfState(
-      socket.id
-    );
+    return projectile;
   }
 
 
   // =====================================================
-  // E — STRENGTHEN
-  // =====================================================
-
-  useStrengthen(
-    socket,
-    username
-  ) {
-
-    const squad =
-      this.getSquadForUser(
-        username
-      );
-
-
-    const state =
-      this.getCombat(
-        socket.id
-      );
-
-
-    if (
-      !squad ||
-      squad.mode !== 'pvp' ||
-      squad.phase !== 'arena' ||
-      !state
-    ) {
-
-      return;
-    }
-
-
-    const now =
-      Date.now();
-
-
-    const {
-      player,
-      combat
-    } = state;
-
-
-    if (
-      !this.canUseChengAction(
-        player,
-        combat,
-        now
-      )
-    ) {
-
-      return;
-    }
-
-
-    if (
-      now <
-      combat.strengthenReadyAt
-    ) {
-
-      return;
-    }
-
-
-    // 40 sec cooldown.
-    combat.strengthenReadyAt =
-      now +
-      40000;
-
-
-    // 5 sec duration.
-    combat.strengthenUntil =
-      now +
-      5000;
-
-
-    this.io
-      .to(
-        this.roomForSquad(
-          squad
-        )
-      )
-      .emit(
-        'combat_strengthen_started',
-        {
-
-          playerId:
-            player.id,
-
-          until:
-            combat.strengthenUntil,
-
-          serverNow:
-            now
-        }
-      );
-
-
-    this.emitSelfState(
-      socket.id
-    );
-  }
-
-
-  // =====================================================
-  // APPLY DAMAGE
+  // DAMAGE
   // =====================================================
 
   applyDamage(
@@ -1250,25 +1243,96 @@ class CombatManager {
       target.combat;
 
 
-    combat.hp =
-      Math.max(
-        0,
-        combat.hp -
-        amount
-      );
+    let remainingDamage =
+      amount;
 
+
+    /*
+      SHIELD ABSORPTION
+    */
+
+    if (
+      combat.shieldHp > 0 &&
+      now <
+        combat.shieldUntil
+    ) {
+
+      const absorbed =
+        Math.min(
+
+          combat.shieldHp,
+
+          remainingDamage
+        );
+
+
+      combat.shieldHp -=
+        absorbed;
+
+
+      remainingDamage -=
+        absorbed;
+
+
+      this.io
+        .to(
+          this.roomForSquad(
+            squad
+          )
+        )
+        .emit(
+          'combat_shield_update',
+          {
+
+            playerId:
+              target.id,
+
+            shieldHp:
+              combat.shieldHp,
+
+            shieldMaxHp:
+              combat.shieldMaxHp,
+
+            shieldUntil:
+              combat.shieldUntil,
+
+            serverNow:
+              now
+          }
+        );
+    }
+
+
+    /*
+      DAMAGE RESETS REGEN TIMER
+
+      Even if shield absorbs the
+      entire attack, the player was
+      still hit.
+    */
 
     combat.lastDamageAt =
       now;
 
 
-    /*
-      Receiving damage resets
-      regeneration timer to 10 sec.
-    */
     combat.nextRegenAt =
       now +
       10000;
+
+
+    if (
+      remainingDamage > 0
+    ) {
+
+      combat.hp =
+        Math.max(
+
+          0,
+
+          combat.hp -
+          remainingDamage
+        );
+    }
 
 
     this.io
@@ -1291,9 +1355,12 @@ class CombatManager {
             combat.maxHp,
 
           delta:
-            -amount,
+            -remainingDamage,
 
           sourceId,
+
+          shieldHp:
+            combat.shieldHp,
 
           serverNow:
             now
@@ -1323,61 +1390,38 @@ class CombatManager {
 
 
   // =====================================================
-  // CONTROL HIT
+  // STUN
   // =====================================================
 
-  controlHit(
-    projectile,
-    target
+  applyStun(
+    squad,
+    target,
+    durationMs
   ) {
 
-    const now =
-      Date.now();
-
-
-    const owner =
-      this.gameManager
-        .getPlayer(
-          projectile.ownerId
-        );
-
-
     if (
-      !owner ||
-      !owner.combat ||
-      !owner.combat.alive
+      !target.combat ||
+      !target.combat.alive
     ) {
 
       return;
     }
 
 
-    /*
-      First deal the 50 damage.
-    */
-    this.applyDamage(
-
-      projectile.squad,
-
-      target,
-
-      projectile.damage,
-
-      owner.id
-    );
+    const now =
+      Date.now();
 
 
     /*
-      If target survived:
-      freeze them for 3 sec.
-    */
-    if (
-      target.combat &&
-      target.combat.alive
-    ) {
+      New stun does not queue
+      additively.
 
-      target.combat
-        .stunnedUntil =
+      It just ensures stun lasts
+      until at least now + duration.
+    */
+
+    target.combat
+      .stunnedUntil =
 
         Math.max(
 
@@ -1385,49 +1429,107 @@ class CombatManager {
             .stunnedUntil,
 
           now +
-          2000
+          durationMs
         );
 
 
-      this.io
-        .to(
-          this.roomForSquad(
-            projectile.squad
-          )
+    this.io
+      .to(
+        this.roomForSquad(
+          squad
         )
-        .emit(
-          'combat_stunned',
-          {
+      )
+      .emit(
+        'combat_stunned',
+        {
 
-            playerId:
-              target.id,
+          playerId:
+            target.id,
 
-            until:
-              target.combat
-                .stunnedUntil,
+          until:
+            target.combat
+              .stunnedUntil,
 
-            serverNow:
-              now
-          }
+          serverNow:
+            now
+        }
+      );
+
+
+    this.emitSelfState(
+      target.id
+    );
+  }
+
+
+  // =====================================================
+  // PROJECTILE HIT ROUTING
+  // =====================================================
+
+  handleProjectileHit(
+    projectile,
+    target
+  ) {
+
+    if (
+      projectile.kind ===
+      'cheng_control'
+    ) {
+
+      ChengXiaoshi
+        .projectileHit(
+
+          this,
+
+          projectile,
+
+          target
         );
 
 
-      this.emitSelfState(
-        target.id
-      );
+      return;
     }
 
 
-    /*
-      Successful Control hit:
+    if (
+      projectile.kind ===
+      'lu_laser'
+    ) {
 
-      +50% movement for 3 seconds
-      AND reset basic punch.
-    */
-    owner.combat
-      .speedBuffUntil =
-        now +
-        3000;
+      LuGuang
+        .projectileHit(
+
+          this,
+
+          projectile,
+
+          target
+        );
+    }
+  }
+
+
+  // =====================================================
+  // PROJECTILE EXPIRATION
+  // =====================================================
+
+  expireProjectile(
+    projectile
+  ) {
+
+    if (
+      !this.projectiles.has(
+        projectile.id
+      )
+    ) {
+
+      return;
+    }
+
+
+    this.projectiles.delete(
+      projectile.id
+    );
 
 
     this.io
@@ -1437,25 +1539,16 @@ class CombatManager {
         )
       )
       .emit(
-        'combat_speed_buff',
+        'combat_projectile_expired',
         {
 
-          playerId:
-            owner.id,
-
-          until:
-            owner.combat
-              .speedBuffUntil,
+          id:
+            projectile.id,
 
           serverNow:
-            now
+            Date.now()
         }
       );
-
-
-    this.emitSelfState(
-      owner.id
-    );
   }
 
 
@@ -1526,15 +1619,19 @@ class CombatManager {
 
 
   // =====================================================
-  // LAST PLAYER STANDING
+  // WINNER
   // =====================================================
 
-  checkWinner(squad) {
+  checkWinner(
+    squad
+  ) {
 
     if (
       !squad ||
-      squad.phase !== 'arena' ||
-      squad.mode !== 'pvp'
+      squad.phase !==
+        'arena' ||
+      squad.mode !==
+        'pvp'
     ) {
 
       return;
@@ -1542,10 +1639,9 @@ class CombatManager {
 
 
     /*
-      Solo mode is allowed for testing.
-      We do NOT instantly declare a solo
-      player winner when they spawn.
+      Solo arena is for testing.
     */
+
     if (
       squad.members.length <
       2
@@ -1555,7 +1651,8 @@ class CombatManager {
     }
 
 
-    const alive = [];
+    const alive =
+      [];
 
 
     for (
@@ -1592,7 +1689,8 @@ class CombatManager {
 
 
     if (
-      alive.length !== 1
+      alive.length !==
+      1
     ) {
 
       return;
@@ -1639,13 +1737,16 @@ class CombatManager {
       setTimeout(
         () => {
 
-          this.roundEndTimers.delete(
-            squad.host
-          );
+          this.roundEndTimers
+            .delete(
+              squad.host
+            );
 
 
           this.onRoundEnd(
+
             squad,
+
             winner
           );
 
@@ -1655,14 +1756,16 @@ class CombatManager {
 
 
     this.roundEndTimers.set(
+
       squad.host,
+
       timer
     );
   }
 
 
   // =====================================================
-  // SERVER COMBAT TICK
+  // TICK
   // =====================================================
 
   tick() {
@@ -1671,9 +1774,29 @@ class CombatManager {
       Date.now();
 
 
-    // ---------------------------------------------------
-    // CONTROL PROJECTILES
-    // ---------------------------------------------------
+    this.updateProjectiles(
+      now
+    );
+
+
+    this.updateHealthRegen(
+      now
+    );
+
+
+    this.updateExpiredShields(
+      now
+    );
+  }
+
+
+  // =====================================================
+  // PROJECTILE TICK
+  // =====================================================
+
+  updateProjectiles(
+    now
+  ) {
 
     for (
       const [
@@ -1706,13 +1829,82 @@ class CombatManager {
       }
 
 
+      /*
+        HOMING PROJECTILE
+
+        Lu Guang Strengthen laser.
+      */
+
+      if (
+        projectile.homing &&
+        projectile.targetId
+      ) {
+
+        const target =
+          this.gameManager
+            .getPlayer(
+              projectile.targetId
+            );
+
+
+        if (
+          !target ||
+          !target.combat ||
+          !target.combat.alive
+        ) {
+
+          this.expireProjectile(
+            projectile
+          );
+
+          continue;
+        }
+
+
+        const dx =
+          target.x -
+          projectile.x;
+
+
+        const dz =
+          target.z -
+          projectile.z;
+
+
+        const distance =
+          Math.hypot(
+            dx,
+            dz
+          );
+
+
+        if (
+          distance > 0
+        ) {
+
+          projectile.direction = {
+
+            x:
+              dx /
+              distance,
+
+            z:
+              dz /
+              distance
+          };
+        }
+      }
+
+
       const dt =
         Math.max(
 
           0,
 
           Math.min(
+
             0.1,
+
             (
               now -
               projectile.lastTickAt
@@ -1727,31 +1919,74 @@ class CombatManager {
 
 
       projectile.x +=
-        projectile.direction.x *
+
+        projectile
+          .direction
+          .x *
+
         projectile.speed *
+
         dt;
 
 
       projectile.z +=
-        projectile.direction.z *
+
+        projectile
+          .direction
+          .z *
+
         projectile.speed *
+
         dt;
 
 
-      const traveled =
-        Math.hypot(
+      const lifetime =
+        now -
+        projectile.spawnedAt;
 
-          projectile.x -
-          projectile.startX,
 
-          projectile.z -
-          projectile.startZ
-        );
+      /*
+        Normal straight projectile:
+        range limited.
+
+        Homing projectile:
+        lifetime limited instead,
+        so Strengthen laser keeps
+        chasing.
+      */
+
+      if (
+        !projectile.homing
+      ) {
+
+        const traveled =
+          Math.hypot(
+
+            projectile.x -
+            projectile.startX,
+
+            projectile.z -
+            projectile.startZ
+          );
+
+
+        if (
+          traveled >=
+          projectile.maxRange
+        ) {
+
+          this.expireProjectile(
+            projectile
+          );
+
+          continue;
+        }
+      }
 
 
       if (
-        traveled >=
-        projectile.maxRange
+        lifetime >=
+        projectile.maxLifetime
       ) {
 
         this.expireProjectile(
@@ -1768,7 +2003,8 @@ class CombatManager {
 
       for (
         const username
-        of projectile.squad.members
+        of projectile.squad
+          .members
       ) {
 
         const socketId =
@@ -1804,6 +2040,25 @@ class CombatManager {
         }
 
 
+        /*
+          Homing laser is locked to
+          its original target.
+
+          It shouldn't accidentally hit
+          someone else.
+        */
+
+        if (
+          projectile.homing &&
+          projectile.targetId &&
+          target.id !==
+            projectile.targetId
+        ) {
+
+          continue;
+        }
+
+
         const distance =
           Math.hypot(
 
@@ -1829,54 +2084,65 @@ class CombatManager {
       }
 
 
-      if (hitTarget) {
+      if (!hitTarget) {
 
-        this.io
-          .to(
-            this.roomForSquad(
-              projectile.squad
-            )
-          )
-          .emit(
-            'combat_projectile_hit',
-            {
-
-              id:
-                projectile.id,
-
-              targetId:
-                hitTarget.id,
-
-              x:
-                projectile.x,
-
-              z:
-                projectile.z,
-
-              serverNow:
-                now
-            }
-          );
-
-
-        this.projectiles.delete(
-          id
-        );
-
-
-        this.controlHit(
-
-          projectile,
-
-          hitTarget
-        );
+        continue;
       }
+
+
+      this.io
+        .to(
+          this.roomForSquad(
+            projectile.squad
+          )
+        )
+        .emit(
+          'combat_projectile_hit',
+          {
+
+            id:
+              projectile.id,
+
+            kind:
+              projectile.kind,
+
+            targetId:
+              hitTarget.id,
+
+            x:
+              projectile.x,
+
+            z:
+              projectile.z,
+
+            serverNow:
+              now
+          }
+        );
+
+
+      this.projectiles.delete(
+        id
+      );
+
+
+      this.handleProjectileHit(
+
+        projectile,
+
+        hitTarget
+      );
     }
+  }
 
 
-    // ---------------------------------------------------
-    // HEALTH REGENERATION
-    // ---------------------------------------------------
+  // =====================================================
+  // HEALTH REGEN
+  // =====================================================
+
+  updateHealthRegen(
+    now
+  ) {
 
     for (
       const player
@@ -1925,7 +2191,6 @@ class CombatManager {
       }
 
 
-      // +20 HP per second.
       combat.hp =
         Math.min(
 
@@ -1965,6 +2230,9 @@ class CombatManager {
             sourceId:
               null,
 
+            shieldHp:
+              combat.shieldHp,
+
             serverNow:
               now
           }
@@ -1979,45 +2247,92 @@ class CombatManager {
 
 
   // =====================================================
-  // PROJECTILE EXPIRED
+  // SHIELD EXPIRATION
   // =====================================================
 
-  expireProjectile(
-    projectile
+  updateExpiredShields(
+    now
   ) {
 
-    if (
-      !this.projectiles.has(
-        projectile.id
+    for (
+      const player
+      of Object.values(
+        this.gameManager.players
       )
     ) {
 
-      return;
-    }
+      const combat =
+        player.combat;
 
 
-    this.projectiles.delete(
-      projectile.id
-    );
+      if (
+        !combat ||
+        combat.shieldHp <= 0 ||
+        combat.shieldUntil <= 0
+      ) {
+
+        continue;
+      }
 
 
-    this.io
-      .to(
-        this.roomForSquad(
-          projectile.squad
-        )
-      )
-      .emit(
-        'combat_projectile_expired',
-        {
+      if (
+        now <
+        combat.shieldUntil
+      ) {
 
-          id:
-            projectile.id,
+        continue;
+      }
 
-          serverNow:
-            Date.now()
-        }
+
+      combat.shieldHp =
+        0;
+
+
+      combat.shieldUntil =
+        0;
+
+
+      const squad =
+        this.getSquadForUser(
+          player.name
+        );
+
+
+      if (squad) {
+
+        this.io
+          .to(
+            this.roomForSquad(
+              squad
+            )
+          )
+          .emit(
+            'combat_shield_update',
+            {
+
+              playerId:
+                player.id,
+
+              shieldHp:
+                0,
+
+              shieldMaxHp:
+                combat.shieldMaxHp,
+
+              shieldUntil:
+                0,
+
+              serverNow:
+                now
+            }
+          );
+      }
+
+
+      this.emitSelfState(
+        player.id
       );
+    }
   }
 }
 

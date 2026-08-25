@@ -65,6 +65,14 @@ const deathAnimations =
   {};
 
 
+/*
+  This object stores the LOCAL
+  player's combat information.
+
+  It now supports BOTH Cheng
+  and Lu Guang.
+*/
+
 let selfCombat = {
 
   character:
@@ -95,6 +103,15 @@ let selfCombat = {
     0,
 
   strengthenReadyAt:
+    0,
+
+  shieldHp:
+    0,
+
+  shieldMaxHp:
+    0,
+
+  shieldUntil:
     0
 };
 
@@ -152,6 +169,13 @@ socket.on(
         me.character;
 
 
+      /*
+        Character HP comes from server.
+
+        Cheng = 850
+        Lu Guang = 600
+      */
+
       selfCombat.hp =
         me.hp ??
         850;
@@ -165,6 +189,24 @@ socket.on(
       selfCombat.alive =
         me.alive !==
         false;
+
+
+      selfCombat.shieldHp =
+        me.shieldHp ||
+        0;
+
+
+      selfCombat.shieldMaxHp =
+        me.shieldMaxHp ||
+        0;
+
+
+      selfCombat.shieldUntil =
+        me.shieldUntil ||
+        0;
+
+
+      updateAbilityNames();
     }
 
 
@@ -248,6 +290,107 @@ socket.on(
 
 
 // =====================================================
+// ABILITY HUD NAMES
+// =====================================================
+
+function updateAbilityNames() {
+
+  const basicName =
+    document.getElementById(
+      'basic-name'
+    );
+
+
+  const abilityName =
+    document.getElementById(
+      'ability-name'
+    );
+
+
+  const ultName =
+    document.getElementById(
+      'ult-name'
+    );
+
+
+  const instructions =
+    document.getElementById(
+      'instructions'
+    );
+
+
+  if (
+    selectedCharacter ===
+      'cheng_xiaoshi'
+  ) {
+
+    basicName.innerText =
+      'PUNCH';
+
+
+    abilityName.innerText =
+      'CONTROL';
+
+
+    ultName.innerText =
+      'STRENGTHEN';
+
+
+    instructions.innerText =
+      'WASD Move • SHIFT Camera • SPACE Punch • Q Control • E Strengthen';
+
+
+    return;
+  }
+
+
+  if (
+    selectedCharacter ===
+      'lu_guang'
+  ) {
+
+    basicName.innerText =
+      'LASER';
+
+
+    abilityName.innerText =
+      'SHIELD';
+
+
+    ultName.innerText =
+      'STRENGTHEN';
+
+
+    instructions.innerText =
+      'WASD Move • SHIFT Camera • SPACE Laser • Q Shield • E Strengthen';
+
+
+    return;
+  }
+
+
+  /*
+    Future character fallback.
+  */
+
+  basicName.innerText =
+    'BASIC';
+
+
+  abilityName.innerText =
+    'ABILITY';
+
+
+  ultName.innerText =
+    'ULTIMATE';
+
+
+  instructions.innerText =
+    'WASD Move • SHIFT Camera • SPACE Basic • Q Ability • E Ultimate';
+}
+
+
+// =====================================================
 // NAME + HEALTH BAR TEXTURE
 // =====================================================
 
@@ -279,6 +422,7 @@ function makeNameplateTexture(
     Math.max(
       0,
       player.hp ??
+      player.maxHp ??
       850
     );
 
@@ -304,7 +448,10 @@ function makeNameplateTexture(
   );
 
 
+  // -----------------------------------------------------
   // NAME
+  // -----------------------------------------------------
+
   ctx.font =
     'bold 34px Segoe UI';
 
@@ -345,7 +492,10 @@ function makeNameplateTexture(
   );
 
 
+  // -----------------------------------------------------
   // HEALTH BAR
+  // -----------------------------------------------------
+
   const barX =
     76;
 
@@ -412,7 +562,10 @@ function makeNameplateTexture(
   );
 
 
-  // NUMBERS
+  // -----------------------------------------------------
+  // HP NUMBERS
+  // -----------------------------------------------------
+
   ctx.font =
     'bold 22px Segoe UI';
 
@@ -481,21 +634,24 @@ function updateNameplate(
 
 
   const oldMap =
-    rendered.nameplate
+    rendered
+      .nameplate
       .material
       .map;
 
 
-  rendered.nameplate
+  rendered
+    .nameplate
     .material
     .map =
 
-    makeNameplateTexture(
-      rendered.playerData
-    );
+      makeNameplateTexture(
+        rendered.playerData
+      );
 
 
-  rendered.nameplate
+  rendered
+    .nameplate
     .material
     .needsUpdate =
       true;
@@ -519,49 +675,73 @@ function createPlayerObject(
   const container =
     new THREE.Group();
 
+
   const isLocalPlayer =
-    player.name === playerName;
+    player.name ===
+    playerName;
+
+
+  /*
+    Temporary colors:
+
+    Cheng = blue
+    Lu = pale white
+  */
 
   const color =
+
     player.character ===
-    'cheng_xiaoshi'
+      'cheng_xiaoshi'
 
       ? 0x3388ff
-      : 0xcccccc;
+
+      : player.character ===
+          'lu_guang'
+
+        ? 0xe6e6e6
+
+        : 0xcccccc;
 
 
-    const body =
-        new THREE.Mesh(
-    
-            new THREE.BoxGeometry(
-            0.8,
-            1.8,
-            0.4
-            ),
-    
-            new THREE.MeshStandardMaterial({
-    
-            color,
-    
-            transparent:
-                isLocalPlayer,
-    
-            opacity:
-                isLocalPlayer
-                ? 0.6
-                : 1,
-    
-            depthWrite:
-                !isLocalPlayer
-            })
-        );
+  // -----------------------------------------------------
+  // BODY
+  // -----------------------------------------------------
+
+  const body =
+    new THREE.Mesh(
+
+      new THREE.BoxGeometry(
+        0.8,
+        1.8,
+        0.4
+      ),
+
+      new THREE.MeshStandardMaterial({
+
+        color,
+
+        transparent:
+          isLocalPlayer,
+
+        opacity:
+          isLocalPlayer
+            ? 0.6
+            : 1,
+
+        depthWrite:
+          !isLocalPlayer
+      })
+    );
 
 
   body.position.y =
     0.9;
 
 
-  // Shows facing direction.
+  // -----------------------------------------------------
+  // FACING POINTER
+  // -----------------------------------------------------
+
   const pointer =
     new THREE.Mesh(
 
@@ -590,43 +770,46 @@ function createPlayerObject(
   );
 
 
-  // SIMPLE PUNCH ARM
+  // -----------------------------------------------------
+  // CHENG PUNCH ARM
+  // -----------------------------------------------------
+
   const rightArm =
     new THREE.Group();
 
 
-    rightArm.position.set(
-      0.25,
-      1.35,
-      -0.15
-    );
+  rightArm.position.set(
+    0.25,
+    1.35,
+    -0.15
+  );
 
 
-   const armMesh =
-      new THREE.Mesh(
-  
+  const armMesh =
+    new THREE.Mesh(
+
       new THREE.BoxGeometry(
-          0.24,
-          0.24,
-          0.8
-        ),
-    
-      new THREE.MeshStandardMaterial({
-    
-          color,
+        0.24,
+        0.24,
+        0.8
+      ),
 
-          transparent:
+      new THREE.MeshStandardMaterial({
+
+        color,
+
+        transparent:
           isLocalPlayer,
-    
-          opacity:
+
+        opacity:
           isLocalPlayer
-              ? 0.8
-              : 1,
-    
-          depthWrite:
+            ? 0.8
+            : 1,
+
+        depthWrite:
           !isLocalPlayer
       })
-      );
+    );
 
 
   armMesh.position.z =
@@ -638,7 +821,10 @@ function createPlayerObject(
   );
 
 
+  // -----------------------------------------------------
   // NAME + HP
+  // -----------------------------------------------------
+
   const nameplateMaterial =
     new THREE.SpriteMaterial({
 
@@ -679,7 +865,10 @@ function createPlayerObject(
     999;
 
 
+  // -----------------------------------------------------
   // STRENGTHEN AURA
+  // -----------------------------------------------------
+
   const aura =
     new THREE.Mesh(
 
@@ -713,6 +902,47 @@ function createPlayerObject(
     0.08;
 
 
+  // -----------------------------------------------------
+  // LU GUANG SHIELD
+  // -----------------------------------------------------
+
+  const shield =
+    new THREE.Mesh(
+
+      new THREE.SphereGeometry(
+        1.15,
+        20,
+        14
+      ),
+
+      new THREE.MeshBasicMaterial({
+
+        color:
+          0x66fcf1,
+
+        transparent:
+          true,
+
+        opacity:
+          0,
+
+        wireframe:
+          true,
+
+        depthWrite:
+          false
+      })
+    );
+
+
+  shield.position.y =
+    1.0;
+
+
+  // -----------------------------------------------------
+  // ADD EVERYTHING
+  // -----------------------------------------------------
+
   container.add(
     body
   );
@@ -738,6 +968,11 @@ function createPlayerObject(
   );
 
 
+  container.add(
+    shield
+  );
+
+
   return {
 
     container,
@@ -750,19 +985,22 @@ function createPlayerObject(
 
     aura,
 
+    shield,
+
     strengthenUntil:
       0,
 
-    playerData:
-      {
-        ...player
-      },
+    playerData: {
+      ...player
+    },
 
     targetPosition:
       new THREE.Vector3(
-        player.x || 0,
+        player.x ||
         0,
-        player.z || 0
+        0,
+        player.z ||
+        0
       ),
 
     targetRotation:
@@ -825,6 +1063,10 @@ function initArena(
     window.innerHeight
   );
 
+
+  // -----------------------------------------------------
+  // FLOOR
+  // -----------------------------------------------------
 
   const floor =
     new THREE.Mesh(
@@ -898,7 +1140,7 @@ function initArena(
 
 
   // -----------------------------------------------------
-  // KEYS
+  // KEY DOWN
   // -----------------------------------------------------
 
   window.addEventListener(
@@ -914,13 +1156,17 @@ function initArena(
         true;
 
 
-      // SPECTATOR CONTROLS
+      // -----------------------------------------------
+      // SPECTATOR
+      // -----------------------------------------------
+
       if (isSpectator) {
 
         if (
           event.key ===
             'ArrowLeft' ||
-          key === 'a'
+          key ===
+            'a'
         ) {
 
           cycleSpectator(
@@ -932,7 +1178,8 @@ function initArena(
         if (
           event.key ===
             'ArrowRight' ||
-          key === 'd'
+          key ===
+            'd'
         ) {
 
           cycleSpectator(
@@ -945,7 +1192,10 @@ function initArena(
       }
 
 
+      // -----------------------------------------------
       // SPACE — BASIC
+      // -----------------------------------------------
+
       if (
         event.code ===
         'Space'
@@ -953,29 +1203,41 @@ function initArena(
 
         event.preventDefault();
 
+
         tryBasicAttack();
       }
 
 
-      // Q — CONTROL
+      // -----------------------------------------------
+      // Q — ABILITY
+      // -----------------------------------------------
+
       if (
-        key === 'q'
+        key ===
+        'q'
       ) {
 
-        tryControl();
+        tryAbility();
       }
 
 
-      // E — STRENGTHEN
+      // -----------------------------------------------
+      // E — ULT
+      // -----------------------------------------------
+
       if (
-        key === 'e'
+        key ===
+        'e'
       ) {
 
-        tryStrengthen();
+        tryUlt();
       }
 
 
+      // -----------------------------------------------
       // SHIFT — POINTER LOCK
+      // -----------------------------------------------
+
       if (
         event.key ===
         'Shift'
@@ -998,6 +1260,10 @@ function initArena(
   );
 
 
+  // -----------------------------------------------------
+  // KEY UP
+  // -----------------------------------------------------
+
   window.addEventListener(
     'keyup',
     event => {
@@ -1011,6 +1277,10 @@ function initArena(
   );
 
 
+  // -----------------------------------------------------
+  // POINTER LOCK
+  // -----------------------------------------------------
+
   document.addEventListener(
     'pointerlockchange',
     () => {
@@ -1022,6 +1292,10 @@ function initArena(
     }
   );
 
+
+  // -----------------------------------------------------
+  // MOUSE CAMERA
+  // -----------------------------------------------------
 
   document.addEventListener(
     'mousemove',
@@ -1069,6 +1343,10 @@ function initArena(
   );
 
 
+  // -----------------------------------------------------
+  // RESIZE
+  // -----------------------------------------------------
+
   window.addEventListener(
     'resize',
     () => {
@@ -1099,6 +1377,10 @@ function initArena(
   );
 
 
+  // -----------------------------------------------------
+  // ANIMATION LOOP
+  // -----------------------------------------------------
+
   if (
     !animationStarted
   ) {
@@ -1117,7 +1399,7 @@ function initArena(
 
 
 // =====================================================
-// REMOVE ALL CURRENT ARENA PLAYER OBJECTS
+// REMOVE ARENA PLAYERS
 // =====================================================
 
 function clearArenaPlayers() {
@@ -1174,10 +1456,12 @@ function clearArenaPlayers() {
       projectiles
     )
     .forEach(
-      id =>
+      id => {
+
         removeProjectile(
           id
-        )
+        );
+      }
     );
 }
 
@@ -1191,6 +1475,7 @@ function syncArenaPlayers(
 ) {
 
   if (!scene) {
+
     return;
   }
 
@@ -1317,7 +1602,11 @@ function tryBasicAttack() {
 }
 
 
-function tryControl() {
+// =====================================================
+// Q
+// =====================================================
+
+function tryAbility() {
 
   if (
     !canLocalAct()
@@ -1326,6 +1615,19 @@ function tryControl() {
     return;
   }
 
+
+  /*
+    The event name is still
+    combat_control_input because
+    the server already uses that
+    as the generic Q input.
+
+    Cheng:
+      Q = Control
+
+    Lu:
+      Q = Shield
+  */
 
   socket.emit(
     'combat_control_input'
@@ -1333,7 +1635,11 @@ function tryControl() {
 }
 
 
-function tryStrengthen() {
+// =====================================================
+// E
+// =====================================================
+
+function tryUlt() {
 
   if (
     !canLocalAct()
@@ -1343,11 +1649,23 @@ function tryStrengthen() {
   }
 
 
+  /*
+    Existing server event is
+    kept unchanged.
+
+    Both current characters use
+    Strengthen as E anyway.
+  */
+
   socket.emit(
     'combat_strengthen_input'
   );
 }
 
+
+// =====================================================
+// CAN LOCAL PLAYER ACT?
+// =====================================================
 
 function canLocalAct() {
 
@@ -1360,9 +1678,20 @@ function canLocalAct() {
   }
 
 
+  /*
+    IMPORTANT:
+
+    We DO NOT check for Cheng here anymore.
+
+    Any selected/implemented character
+    may send Space/Q/E.
+
+    The server determines what those
+    inputs mean.
+  */
+
   if (
-    selectedCharacter !==
-      'cheng_xiaoshi'
+    !selectedCharacter
   ) {
 
     return false;
@@ -1402,36 +1731,91 @@ function getLocalMovementMultiplier() {
     Date.now();
 
 
-  let multiplier =
-    1;
-
+  // -----------------------------------------------------
+  // CHENG
+  // -----------------------------------------------------
 
   if (
-    now <
-    selfCombat.speedBuffUntil
+    selectedCharacter ===
+      'cheng_xiaoshi'
   ) {
 
-    multiplier +=
-      0.50;
+    let multiplier =
+      1;
+
+
+    /*
+      Successful Control hit:
+      +50%
+    */
+
+    if (
+      now <
+      selfCombat.speedBuffUntil
+    ) {
+
+      multiplier +=
+        0.50;
+    }
+
+
+    /*
+      Strengthen:
+      +15%
+    */
+
+    if (
+      now <
+      selfCombat.strengthenUntil
+    ) {
+
+      multiplier +=
+        0.15;
+    }
+
+
+    return multiplier;
   }
 
 
+  // -----------------------------------------------------
+  // LU GUANG
+  // -----------------------------------------------------
+
   if (
-    now <
-    selfCombat.strengthenUntil
+    selectedCharacter ===
+      'lu_guang'
   ) {
 
-    multiplier +=
-      0.15;
+    let multiplier =
+      1;
+
+
+    /*
+      Strengthen:
+      +20%
+    */
+
+    if (
+      now <
+      selfCombat.strengthenUntil
+    ) {
+
+      multiplier +=
+        0.20;
+    }
+
+
+    return multiplier;
   }
 
 
-  return multiplier;
+  return 1;
 }
 
 
 // =====================================================
-// PUNCH ANIMATION
+// CHENG PUNCH ANIMATION
 // =====================================================
 
 function animatePunch(
@@ -1450,6 +1834,10 @@ function animatePunch(
   };
 }
 
+
+// =====================================================
+// UPDATE PUNCH
+// =====================================================
 
 function updatePunchAnimations(
   now
@@ -1476,6 +1864,7 @@ function updatePunchAnimations(
           delete punchAnimations[
             playerId
           ];
+
 
           return;
         }
@@ -1505,7 +1894,7 @@ function updatePunchAnimations(
           .rightArm
           .position
           .z =
-        
+
             -0.15 -
             punch *
             1.35;
@@ -1521,7 +1910,8 @@ function updatePunchAnimations(
 
 
         if (
-          t >= 1
+          t >=
+          1
         ) {
 
           rendered
@@ -1548,26 +1938,76 @@ function updatePunchAnimations(
 
 
 // =====================================================
-// CONTROL PROJECTILE VISUAL
+// PROJECTILE VISUAL
 // =====================================================
 
 function spawnProjectile(
   data
 ) {
 
-  const geometry =
-    new THREE.SphereGeometry(
-      0.34,
-      12,
-      12
-    );
+  let geometry;
+
+  let material;
 
 
-  const material =
-    new THREE.MeshBasicMaterial({
-      color:
-        0x66fcf1
-    });
+  // -----------------------------------------------------
+  // LU GUANG LASER
+  // -----------------------------------------------------
+
+  if (
+    data.kind ===
+      'lu_laser'
+  ) {
+
+    /*
+      Long narrow beam.
+      Box points along its Z axis.
+    */
+
+    geometry =
+      new THREE.BoxGeometry(
+        0.13,
+        0.13,
+        1.25
+      );
+
+
+    material =
+      new THREE.MeshBasicMaterial({
+
+        color:
+          data.strengthened
+            ? 0xffffff
+            : 0x66fcf1,
+
+        transparent:
+          true,
+
+        opacity:
+          0.95
+      });
+
+  } else {
+
+    // ---------------------------------------------------
+    // CHENG CONTROL
+    // ---------------------------------------------------
+
+    geometry =
+      new THREE.SphereGeometry(
+        0.34,
+        12,
+        12
+      );
+
+
+    material =
+      new THREE.MeshBasicMaterial({
+
+        color:
+          0x66fcf1
+      });
+  }
 
 
   const mesh =
@@ -1577,15 +2017,28 @@ function spawnProjectile(
     );
 
 
-  /*
-    Spawn at server-provided
-    world position.
-  */
   mesh.position.set(
     data.x,
     1.05,
     data.z
   );
+
+
+  /*
+    Make Lu's beam visually point
+    in the direction it is flying.
+  */
+
+  if (
+    data.kind ===
+      'lu_laser'
+  ) {
+
+    rotateLaserTowardDirection(
+      mesh,
+      data.direction
+    );
+  }
 
 
   scene.add(
@@ -1599,20 +2052,58 @@ function spawnProjectile(
 
     ...data,
 
-    mesh
+    mesh,
+
+    visualLastUpdate:
+      performance.now()
   };
 }
 
+
+// =====================================================
+// ROTATE LASER
+// =====================================================
+
+function rotateLaserTowardDirection(
+  mesh,
+  direction
+) {
+
+  if (
+    !mesh ||
+    !direction
+  ) {
+
+    return;
+  }
+
+
+  mesh.rotation.y =
+    Math.atan2(
+
+      direction.x,
+
+      direction.z
+    );
+}
+
+
+// =====================================================
+// REMOVE PROJECTILE
+// =====================================================
 
 function removeProjectile(
   id
 ) {
 
   const projectile =
-    projectiles[id];
+    projectiles[
+      id
+    ];
 
 
   if (!projectile) {
+
     return;
   }
 
@@ -1643,9 +2134,15 @@ function removeProjectile(
 }
 
 
-function updateProjectiles() {
+// =====================================================
+// UPDATE PROJECTILES
+// =====================================================
 
-  const now =
+function updateProjectiles(
+  frameNow
+) {
+
+  const serverNow =
     Date.now();
 
 
@@ -1656,22 +2153,172 @@ function updateProjectiles() {
     .forEach(
       projectile => {
 
+        // ------------------------------------------------
+        // HOMING LU GUANG STRENGTHEN LASER
+        // ------------------------------------------------
+
+        if (
+          projectile.kind ===
+            'lu_laser' &&
+          projectile.homing &&
+          projectile.targetId
+        ) {
+
+          const target =
+            getRenderedPlayer(
+              projectile.targetId
+            );
+
+
+          if (!target) {
+
+            return;
+          }
+
+
+          const previousUpdate =
+            projectile.visualLastUpdate ||
+            frameNow;
+
+
+          const dt =
+            Math.max(
+
+              0,
+
+              Math.min(
+
+                0.05,
+
+                (
+                  frameNow -
+                  previousUpdate
+                ) /
+                1000
+              )
+            );
+
+
+          projectile.visualLastUpdate =
+            frameNow;
+
+
+          const targetPosition =
+            target
+              .container
+              .position;
+
+
+          const dx =
+            targetPosition.x -
+            projectile
+              .mesh
+              .position
+              .x;
+
+
+          const dz =
+            targetPosition.z -
+            projectile
+              .mesh
+              .position
+              .z;
+
+
+          const distance =
+            Math.hypot(
+              dx,
+              dz
+            );
+
+
+          if (
+            distance >
+            0
+          ) {
+
+            const direction = {
+
+              x:
+                dx /
+                distance,
+
+              z:
+                dz /
+                distance
+            };
+
+
+            projectile.direction =
+              direction;
+
+
+            const movement =
+              projectile.speed *
+              dt;
+
+
+            /*
+              Don't visually overshoot.
+            */
+
+            const amount =
+              Math.min(
+                movement,
+                distance
+              );
+
+
+            projectile
+              .mesh
+              .position
+              .x +=
+
+                direction.x *
+                amount;
+
+
+            projectile
+              .mesh
+              .position
+              .z +=
+
+                direction.z *
+                amount;
+
+
+            rotateLaserTowardDirection(
+
+              projectile.mesh,
+
+              direction
+            );
+          }
+
+
+          return;
+        }
+
+
+        // ------------------------------------------------
+        // NORMAL STRAIGHT PROJECTILE
+        // ------------------------------------------------
+
         /*
-          spawnedAt came from server.
+          spawnedAt comes from server.
 
-          If this packet reaches us 40ms late,
-          we draw it 40ms further along its
-          trajectory immediately.
-
-          This reduces visual desync.
+          If packet arrives a little late,
+          immediately render farther along
+          its path.
         */
+
         const elapsed =
           Math.max(
 
             0,
 
             (
-              now -
+              serverNow -
               projectile.spawnedAt
             ) /
             1000
@@ -1712,18 +2359,37 @@ function updateProjectiles() {
             distance;
 
 
-        projectile
-          .mesh
-          .rotation
-          .x +=
-            0.15;
+        if (
+          projectile.kind ===
+            'lu_laser'
+        ) {
+
+          rotateLaserTowardDirection(
+
+            projectile.mesh,
+
+            projectile.direction
+          );
+
+        } else {
+
+          /*
+            Cheng Control orb spin.
+          */
+
+          projectile
+            .mesh
+            .rotation
+            .x +=
+              0.15;
 
 
-        projectile
-          .mesh
-          .rotation
-          .y +=
-            0.20;
+          projectile
+            .mesh
+            .rotation
+            .y +=
+              0.20;
+        }
       }
     );
 }
@@ -1788,6 +2454,83 @@ function updateStrengthenVisuals() {
 
 
 // =====================================================
+// SHIELD VISUAL
+// =====================================================
+
+function updateShieldVisuals() {
+
+  const now =
+    Date.now();
+
+
+  const renderedPlayers = [
+
+    localRenderedPlayer,
+
+    ...Object.values(
+      remotePlayers
+    )
+
+  ].filter(Boolean);
+
+
+  renderedPlayers.forEach(
+    rendered => {
+
+      const shieldHp =
+        rendered
+          .playerData
+          .shieldHp ||
+        0;
+
+
+      const shieldUntil =
+        rendered
+          .playerData
+          .shieldUntil ||
+        0;
+
+
+      const active =
+
+        shieldHp >
+          0 &&
+
+        now <
+          shieldUntil;
+
+
+      rendered
+        .shield
+        .material
+        .opacity =
+
+          active
+            ? 0.35
+            : 0;
+
+
+      if (active) {
+
+        rendered
+          .shield
+          .rotation
+          .y +=
+            0.02;
+
+
+        rendered
+          .shield
+          .rotation
+          .x +=
+            0.008;
+      }
+    }
+  );
+}
+
+
+// =====================================================
 // DEATH ANIMATION
 // =====================================================
 
@@ -1802,6 +2545,7 @@ function animateDeath(
 
 
   if (!rendered) {
+
     return;
   }
 
@@ -1820,6 +2564,10 @@ function animateDeath(
   };
 }
 
+
+// =====================================================
+// UPDATE DEATH
+// =====================================================
 
 function updateDeathAnimations(
   now
@@ -1848,7 +2596,10 @@ function updateDeathAnimations(
           );
 
 
-        // Tip over.
+        // ------------------------------------------------
+        // TIP OVER
+        // ------------------------------------------------
+
         animation
           .rendered
           .container
@@ -1860,7 +2611,10 @@ function updateDeathAnimations(
             2;
 
 
-        // Then shrink.
+        // ------------------------------------------------
+        // SHRINK
+        // ------------------------------------------------
+
         const scale =
           Math.max(
 
@@ -1890,7 +2644,8 @@ function updateDeathAnimations(
 
 
         if (
-          t >= 1
+          t >=
+          1
         ) {
 
           if (scene) {
@@ -1924,7 +2679,7 @@ function updateDeathAnimations(
 
 
 // =====================================================
-// COOLDOWN UI
+// COOLDOWN HUD
 // =====================================================
 
 function updateCooldownHud() {
@@ -1952,13 +2707,13 @@ function updateCooldownHud() {
     );
 
 
-  const control =
+  const ability =
     document.getElementById(
       'control-status'
     );
 
 
-  const strengthen =
+  const ult =
     document.getElementById(
       'strengthen-status'
     );
@@ -1970,35 +2725,6 @@ function updateCooldownHud() {
     );
 
 
-  /*
-    Lu Guang has no invented
-    combat kit yet.
-  */
-  if (
-    selectedCharacter !==
-    'cheng_xiaoshi'
-  ) {
-
-    basic.innerText =
-      'UNAVAILABLE';
-
-
-    control.innerText =
-      'UNAVAILABLE';
-
-
-    strengthen.innerText =
-      'UNAVAILABLE';
-
-
-    status.innerText =
-      'KIT NOT IMPLEMENTED YET';
-
-
-    return;
-  }
-
-
   basic.innerText =
     cooldownText(
       selfCombat.basicReadyAt,
@@ -2006,19 +2732,23 @@ function updateCooldownHud() {
     );
 
 
-  control.innerText =
+  ability.innerText =
     cooldownText(
       selfCombat.controlReadyAt,
       now
     );
 
 
-  strengthen.innerText =
+  ult.innerText =
     cooldownText(
       selfCombat.strengthenReadyAt,
       now
     );
 
+
+  // -----------------------------------------------------
+  // STUN HAS PRIORITY
+  // -----------------------------------------------------
 
   if (
     now <
@@ -2032,37 +2762,112 @@ function updateCooldownHud() {
       )}`;
 
 
-  } else if (
-    now <
-    selfCombat.strengthenUntil
-  ) {
-
-    status.innerText =
-      `STRENGTHEN ACTIVE ${formatSeconds(
-        selfCombat.strengthenUntil -
-        now
-      )}`;
-
-
-  } else if (
-    now <
-    selfCombat.speedBuffUntil
-  ) {
-
-    status.innerText =
-      `CONTROL SPEED +50% ${formatSeconds(
-        selfCombat.speedBuffUntil -
-        now
-      )}`;
-
-
-  } else {
-
-    status.innerText =
-      '';
+    return;
   }
+
+
+  // -----------------------------------------------------
+  // CHENG
+  // -----------------------------------------------------
+
+  if (
+    selectedCharacter ===
+      'cheng_xiaoshi'
+  ) {
+
+    if (
+      now <
+      selfCombat.strengthenUntil
+    ) {
+
+      status.innerText =
+        `STRENGTHEN ACTIVE ${formatSeconds(
+          selfCombat.strengthenUntil -
+          now
+        )}`;
+
+
+    } else if (
+      now <
+      selfCombat.speedBuffUntil
+    ) {
+
+      status.innerText =
+        `CONTROL SPEED +50% ${formatSeconds(
+          selfCombat.speedBuffUntil -
+          now
+        )}`;
+
+
+    } else {
+
+      status.innerText =
+        '';
+    }
+
+
+    return;
+  }
+
+
+  // -----------------------------------------------------
+  // LU GUANG
+  // -----------------------------------------------------
+
+  if (
+    selectedCharacter ===
+      'lu_guang'
+  ) {
+
+    if (
+      now <
+      selfCombat.strengthenUntil
+    ) {
+
+      status.innerText =
+        `STRENGTHEN ACTIVE ${formatSeconds(
+          selfCombat.strengthenUntil -
+          now
+        )}`;
+
+
+    } else if (
+      selfCombat.shieldHp >
+        0 &&
+      now <
+        selfCombat.shieldUntil
+    ) {
+
+      status.innerText =
+        `SHIELD ${Math.ceil(
+          selfCombat.shieldHp
+        )} / ${Math.ceil(
+          selfCombat.shieldMaxHp
+        )} • ${formatSeconds(
+          selfCombat.shieldUntil -
+          now
+        )}`;
+
+
+    } else {
+
+      status.innerText =
+        '';
+    }
+
+
+    return;
+  }
+
+
+  status.innerText =
+    '';
 }
 
+
+// =====================================================
+// COOLDOWN TEXT
+// =====================================================
 
 function cooldownText(
   readyAt,
@@ -2078,7 +2883,8 @@ function cooldownText(
 
 
   if (
-    remaining <= 0
+    remaining <=
+    0
   ) {
 
     return 'READY';
@@ -2090,6 +2896,10 @@ function cooldownText(
   );
 }
 
+
+// =====================================================
+// FORMAT SECONDS
+// =====================================================
 
 function formatSeconds(
   milliseconds
@@ -2150,9 +2960,11 @@ function updateRemoteInterpolation(
 
         difference =
           Math.atan2(
+
             Math.sin(
               difference
             ),
+
             Math.cos(
               difference
             )
@@ -2231,10 +3043,15 @@ function animateArena(
   );
 
 
-  updateProjectiles();
+  updateProjectiles(
+    now
+  );
 
 
   updateStrengthenVisuals();
+
+
+  updateShieldVisuals();
 
 
   updateCooldownHud();
@@ -2245,9 +3062,9 @@ function animateArena(
   );
 
 
-  // ---------------------------------------------------
+  // -----------------------------------------------------
   // SPECTATOR
-  // ---------------------------------------------------
+  // -----------------------------------------------------
 
   if (
     isSpectator
@@ -2304,6 +3121,7 @@ function animateArena(
       moveVector.z -=
         1;
 
+
       moved =
         true;
     }
@@ -2313,6 +3131,7 @@ function animateArena(
 
       moveVector.z +=
         1;
+
 
       moved =
         true;
@@ -2324,6 +3143,7 @@ function animateArena(
       moveVector.x -=
         1;
 
+
       moved =
         true;
     }
@@ -2334,11 +3154,16 @@ function animateArena(
       moveVector.x +=
         1;
 
+
       moved =
         true;
     }
   }
 
+
+  // -----------------------------------------------------
+  // LOCAL MOVEMENT
+  // -----------------------------------------------------
 
   if (moved) {
 
@@ -2347,8 +3172,11 @@ function animateArena(
 
 
     const movement =
+
       baseSpeed *
+
       getLocalMovementMultiplier() *
+
       dt;
 
 
@@ -2388,7 +3216,9 @@ function animateArena(
           -24,
 
           Math.min(
+
             24,
+
             localPlayerContainer
               .position
               .x
@@ -2405,7 +3235,9 @@ function animateArena(
           -24,
 
           Math.min(
+
             24,
+
             localPlayerContainer
               .position
               .z
@@ -2420,21 +3252,23 @@ function animateArena(
       yaw;
 
 
-  // ---------------------------------------------------
-  // ~30Hz NETWORK UPDATE
-  // ---------------------------------------------------
+  // -----------------------------------------------------
+  // ~30HZ NETWORK UPDATE
+  // -----------------------------------------------------
 
   const orientationChanged =
 
     Math.abs(
       yaw -
       lastSentYaw
-    ) > 0.002 ||
+    ) >
+    0.002 ||
 
     Math.abs(
       pitch -
       lastSentPitch
-    ) > 0.002;
+    ) >
+    0.002;
 
 
   if (
@@ -2482,9 +3316,9 @@ function animateArena(
   }
 
 
-  // ---------------------------------------------------
+  // -----------------------------------------------------
   // CAMERA
-  // ---------------------------------------------------
+  // -----------------------------------------------------
 
   const cameraOffset =
     new THREE.Vector3(
@@ -2561,7 +3395,8 @@ function livingSpectatorTargets() {
 
         rendered
           .playerData
-          .alive !== false &&
+          .alive !==
+        false &&
 
         rendered
           .container
@@ -2569,6 +3404,10 @@ function livingSpectatorTargets() {
     );
 }
 
+
+// =====================================================
+// CYCLE SPECTATOR
+// =====================================================
 
 function cycleSpectator(
   direction
@@ -2604,6 +3443,10 @@ function cycleSpectator(
 }
 
 
+// =====================================================
+// SHOW SPECTATOR TARGET
+// =====================================================
+
 function showSpectatorTarget(
   target
 ) {
@@ -2615,10 +3458,16 @@ function showSpectatorTarget(
     .innerText =
 
       `SPECTATING: ${
-        target.playerData.name
+        target
+          .playerData
+          .name
       }`;
 }
 
+
+// =====================================================
+// SPECTATOR CAMERA
+// =====================================================
 
 function updateSpectatorCamera() {
 
@@ -2655,13 +3504,6 @@ function updateSpectatorCamera() {
   );
 
 
-  /*
-    Uses the target's synchronized
-    yaw + pitch.
-
-    This makes spectator view follow
-    the player's actual camera direction.
-  */
   const targetYaw =
     target
       .container
@@ -2734,7 +3576,7 @@ function updateSpectatorCamera() {
 
 
 // =====================================================
-// MOVEMENT FROM OTHER PLAYERS
+// OTHER PLAYER MOVEMENT
 // =====================================================
 
 socket.on(
@@ -2807,6 +3649,59 @@ socket.on(
         0;
 
 
+    /*
+      Also preserve combat data included
+      in publicPlayer().
+    */
+
+    if (
+      data.hp !==
+      undefined
+    ) {
+
+      rendered
+        .playerData
+        .hp =
+          data.hp;
+    }
+
+
+    if (
+      data.maxHp !==
+      undefined
+    ) {
+
+      rendered
+        .playerData
+        .maxHp =
+          data.maxHp;
+    }
+
+
+    if (
+      data.shieldHp !==
+      undefined
+    ) {
+
+      rendered
+        .playerData
+        .shieldHp =
+          data.shieldHp;
+    }
+
+
+    if (
+      data.shieldUntil !==
+      undefined
+    ) {
+
+      rendered
+        .playerData
+        .shieldUntil =
+          data.shieldUntil;
+    }
+
+
     rendered
       .targetPosition
       .set(
@@ -2827,7 +3722,7 @@ socket.on(
 
 
 // =====================================================
-// SERVER MOVEMENT CORRECTION
+// MOVEMENT CORRECTION
 // =====================================================
 
 socket.on(
@@ -2880,6 +3775,41 @@ socket.on(
 
       ...data
     };
+
+
+    /*
+      Server is authoritative for
+      the actual selected character.
+    */
+
+    if (
+      data.character
+    ) {
+
+      selfCombat.character =
+        data.character;
+
+
+      selectedCharacter =
+        data.character;
+
+
+      updateAbilityNames();
+    }
+  }
+);
+
+
+// =====================================================
+// CHENG BASIC RESET
+// =====================================================
+
+socket.on(
+  'combat_basic_reset',
+  () => {
+
+    selfCombat.basicReadyAt =
+      0;
   }
 );
 
@@ -2892,24 +3822,52 @@ socket.on(
   'combat_basic_attack',
   data => {
 
-    animatePunch(
-      data.attackerId
-    );
+    /*
+      Currently this event is Cheng's
+      physical punch.
+
+      Lu's basic is represented by
+      lu_laser projectile spawns.
+    */
+
+    if (
+      !data.character ||
+      data.character ===
+        'cheng_xiaoshi'
+    ) {
+
+      animatePunch(
+        data.attackerId
+      );
+    }
   }
 );
 
 
 // =====================================================
-// CONTROL PROJECTILE
+// PROJECTILE SPAWN
 // =====================================================
 
 socket.on(
   'combat_projectile_spawn',
   data => {
 
-    animatePunch(
-      data.ownerId
-    );
+    /*
+      Cheng throws Control with a
+      forward punching motion.
+
+      Lu does NOT punch when firing.
+    */
+
+    if (
+      data.kind ===
+        'cheng_control'
+    ) {
+
+      animatePunch(
+        data.ownerId
+      );
+    }
 
 
     spawnProjectile(
@@ -2918,6 +3876,10 @@ socket.on(
   }
 );
 
+
+// =====================================================
+// PROJECTILE HIT
+// =====================================================
 
 socket.on(
   'combat_projectile_hit',
@@ -2929,6 +3891,10 @@ socket.on(
   }
 );
 
+
+// =====================================================
+// PROJECTILE EXPIRED
+// =====================================================
 
 socket.on(
   'combat_projectile_expired',
@@ -2969,6 +3935,18 @@ socket.on(
           data.maxHp;
 
 
+      if (
+        data.shieldHp !==
+        undefined
+      ) {
+
+        rendered
+          .playerData
+          .shieldHp =
+            data.shieldHp;
+      }
+
+
       updateNameplate(
 
         rendered,
@@ -2991,6 +3969,16 @@ socket.on(
 
       selfCombat.maxHp =
         data.maxHp;
+
+
+      if (
+        data.shieldHp !==
+        undefined
+      ) {
+
+        selfCombat.shieldHp =
+          data.shieldHp;
+      }
     }
   }
 );
@@ -3017,7 +4005,7 @@ socket.on(
 
 
 // =====================================================
-// CONTROL SPEED BUFF
+// CHENG SPEED BUFF
 // =====================================================
 
 socket.on(
@@ -3064,6 +4052,116 @@ socket.on(
 
       selfCombat.strengthenUntil =
         data.until;
+    }
+  }
+);
+
+
+// =====================================================
+// LU GUANG SHIELD START
+// =====================================================
+
+socket.on(
+  'combat_shield_started',
+  data => {
+
+    const rendered =
+      getRenderedPlayer(
+        data.playerId
+      );
+
+
+    if (rendered) {
+
+      rendered
+        .playerData
+        .shieldHp =
+          data.shieldHp;
+
+
+      rendered
+        .playerData
+        .shieldMaxHp =
+          data.shieldMaxHp;
+
+
+      rendered
+        .playerData
+        .shieldUntil =
+          data.until;
+    }
+
+
+    if (
+      data.playerId ===
+      localPlayerId
+    ) {
+
+      selfCombat.shieldHp =
+        data.shieldHp;
+
+
+      selfCombat.shieldMaxHp =
+        data.shieldMaxHp;
+
+
+      selfCombat.shieldUntil =
+        data.until;
+    }
+  }
+);
+
+
+// =====================================================
+// LU GUANG SHIELD UPDATE / BREAK / EXPIRE
+// =====================================================
+
+socket.on(
+  'combat_shield_update',
+  data => {
+
+    const rendered =
+      getRenderedPlayer(
+        data.playerId
+      );
+
+
+    if (rendered) {
+
+      rendered
+        .playerData
+        .shieldHp =
+          data.shieldHp;
+
+
+      rendered
+        .playerData
+        .shieldMaxHp =
+          data.shieldMaxHp;
+
+
+      rendered
+        .playerData
+        .shieldUntil =
+          data.shieldUntil;
+    }
+
+
+    if (
+      data.playerId ===
+      localPlayerId
+    ) {
+
+      selfCombat.shieldHp =
+        data.shieldHp;
+
+
+      selfCombat.shieldMaxHp =
+        data.shieldMaxHp;
+
+
+      selfCombat.shieldUntil =
+        data.shieldUntil;
     }
   }
 );
@@ -3218,6 +4316,49 @@ socket.on(
       false;
 
 
+    selfCombat = {
+
+      character:
+        null,
+
+      hp:
+        850,
+
+      maxHp:
+        850,
+
+      alive:
+        true,
+
+      stunnedUntil:
+        0,
+
+      speedBuffUntil:
+        0,
+
+      strengthenUntil:
+        0,
+
+      basicReadyAt:
+        0,
+
+      controlReadyAt:
+        0,
+
+      strengthenReadyAt:
+        0,
+
+      shieldHp:
+        0,
+
+      shieldMaxHp:
+        0,
+
+      shieldUntil:
+        0
+    };
+
+
     showScreen(
       'team-screen'
     );
@@ -3231,7 +4372,7 @@ socket.on(
 
 
 // =====================================================
-// PLAYER DISCONNECTS
+// PLAYER DISCONNECT
 // =====================================================
 
 socket.on(
@@ -3239,7 +4380,9 @@ socket.on(
   id => {
 
     if (
-      !remotePlayers[id] ||
+      !remotePlayers[
+        id
+      ] ||
       !scene
     ) {
 
@@ -3309,6 +4452,14 @@ function leaveGame() {
 
   currentMode =
     null;
+
+
+  selectedCharacter =
+    null;
+
+
+  characterReady =
+    false;
 
 
   showScreen(
