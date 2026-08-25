@@ -54,7 +54,7 @@ const LuGuang = {
   
       /*
         Automatically find nearest
-        living opponent inside 10 units.
+        living opponent inside 15 units.
       */
   
       const target =
@@ -64,7 +64,7 @@ const LuGuang = {
   
           player,
   
-          10
+          15
         );
   
   
@@ -179,10 +179,10 @@ const LuGuang = {
         direction,
   
         speed:
-          70,
+          80,
   
         maxRange:
-          10,
+          15,
   
         radius:
           0.4,

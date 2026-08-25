@@ -1,9 +1,11 @@
 <!DOCTYPE html>
+
 <html lang="en">
 
 <head>
 
   <meta charset="UTF-8">
+
 
   <title>
     Link Click 2.5D Arena
@@ -25,15 +27,886 @@
     src="/socket.io/socket.io.js"
   ></script>
 
+
+  <!--
+    Character hub styles are kept here for now so
+    you do NOT have to replace your huge style.css.
+  -->
+
+  <style>
+
+    /* ===============================================
+       NEW LOBBY BACKGROUND
+    =============================================== */
+
+    #lobby-screen {
+
+      background:
+
+        linear-gradient(
+          90deg,
+          rgba(4, 7, 12, 0.82) 0%,
+          rgba(4, 7, 12, 0.48) 48%,
+          rgba(4, 7, 12, 0.70) 100%
+        ),
+
+        url('/assets/lobby_background.jpg')
+          center
+          center /
+          cover
+          no-repeat;
+    }
+
+
+    /* ===============================================
+       CHARACTERS BUTTON
+    =============================================== */
+
+    .characters-lobby-btn {
+
+      position: absolute;
+
+      left: 40px;
+      bottom: 40px;
+
+      min-width: 220px;
+    }
+
+
+    /* ===============================================
+       CHARACTER HUB
+    =============================================== */
+
+    #character-hub-screen {
+
+      background:
+        radial-gradient(
+          circle at top,
+          #182534 0%,
+          #090c12 72%
+        );
+
+      overflow-y: auto;
+
+      justify-content: flex-start;
+
+      gap: 24px;
+    }
+
+
+    .character-hub-header {
+
+      width: 100%;
+
+      display: flex;
+
+      justify-content: space-between;
+
+      align-items: flex-start;
+
+      gap: 30px;
+    }
+
+
+    .character-hub-title {
+
+      color: #66fcf1;
+
+      font-size: 38px;
+
+      letter-spacing: 5px;
+
+      font-weight: 900;
+    }
+
+
+    .character-hub-subtitle {
+
+      margin-top: 7px;
+
+      color: #87939d;
+
+      font-size: 12px;
+
+      letter-spacing: 1.5px;
+    }
+
+
+    /* ===============================================
+       MODE TABS
+    =============================================== */
+
+    .character-mode-tabs {
+
+      display: flex;
+
+      gap: 8px;
+
+      padding: 5px;
+
+      background:
+        rgba(
+          8,
+          11,
+          16,
+          0.80
+        );
+
+      border:
+        1px solid
+        rgba(
+          102,
+          252,
+          241,
+          0.18
+        );
+
+      border-radius: 10px;
+    }
+
+
+    .character-mode-tab {
+
+      border: none;
+
+      background: transparent;
+
+      color: #77828c;
+
+      padding:
+        11px
+        21px;
+
+      border-radius: 7px;
+
+      cursor: pointer;
+
+      font-size: 12px;
+
+      font-weight: 900;
+
+      letter-spacing: 1.4px;
+
+      transition:
+        0.18s;
+    }
+
+
+    .character-mode-tab:hover {
+
+      color: #fff;
+    }
+
+
+    .character-mode-tab.active {
+
+      background: #45a29e;
+
+      color: #071012;
+
+      box-shadow:
+        0 0 16px
+        rgba(
+          102,
+          252,
+          241,
+          0.25
+        );
+    }
+
+
+    #character-mode-notice {
+
+      color: #87939d;
+
+      font-size: 12px;
+
+      letter-spacing: 0.7px;
+
+      min-height: 20px;
+    }
+
+
+    /* ===============================================
+       CHARACTER GRID
+    =============================================== */
+
+    #character-hub-grid {
+
+      width: 100%;
+
+      display: grid;
+
+      grid-template-columns:
+        repeat(
+          auto-fill,
+          minmax(
+            270px,
+            1fr
+          )
+        );
+
+      gap: 20px;
+
+      padding-bottom: 95px;
+    }
+
+
+    .character-hub-card {
+
+      position: relative;
+
+      min-height: 430px;
+
+      overflow: hidden;
+
+      padding: 0;
+
+      border:
+        1px solid
+        rgba(
+          102,
+          252,
+          241,
+          0.20
+        );
+
+      border-radius: 14px;
+
+      background: #121821;
+
+      cursor: pointer;
+
+      color: #fff;
+
+      text-align: left;
+
+      transition:
+        transform
+        0.18s,
+        border-color
+        0.18s,
+        box-shadow
+        0.18s;
+    }
+
+
+    .character-hub-card:hover {
+
+      transform:
+        translateY(
+          -5px
+        );
+
+      border-color:
+        #66fcf1;
+
+      box-shadow:
+        0
+        0
+        24px
+        rgba(
+          102,
+          252,
+          241,
+          0.18
+        );
+    }
+
+
+    .character-card-image-wrap {
+
+      position: relative;
+
+      width: 100%;
+
+      height: 285px;
+
+      overflow: hidden;
+
+      background: #080b10;
+    }
+
+
+    .character-card-image {
+
+      width: 100%;
+
+      height: 100%;
+
+      object-fit: cover;
+
+      object-position:
+        center
+        top;
+
+      display: block;
+
+      transition:
+        transform
+        0.25s;
+    }
+
+
+    .character-hub-card:hover
+    .character-card-image {
+
+      transform:
+        scale(
+          1.025
+        );
+    }
+
+
+    .character-rank-slot {
+
+      position: absolute;
+
+      right: 12px;
+      bottom: 12px;
+
+      width: 62px;
+      height: 62px;
+
+      display: flex;
+
+      align-items: center;
+      justify-content: center;
+
+      background:
+        rgba(
+          3,
+          7,
+          12,
+          0.86
+        );
+
+      border:
+        1px solid
+        rgba(
+          255,
+          255,
+          255,
+          0.16
+        );
+
+      border-radius: 10px;
+
+      backdrop-filter:
+        blur(
+          5px
+        );
+    }
+
+
+    .proficiency-pixel-icon {
+
+      display: block;
+
+      image-rendering:
+        pixelated;
+
+      image-rendering:
+        crisp-edges;
+    }
+
+
+    .character-card-copy {
+
+      padding:
+        17px
+        18px
+        20px;
+    }
+
+
+    .character-card-role {
+
+      color: #45a29e;
+
+      font-size: 10px;
+
+      font-weight: 900;
+
+      letter-spacing: 2px;
+
+      margin-bottom: 5px;
+    }
+
+
+    .character-card-copy h2 {
+
+      color: #fff;
+
+      font-size: 21px;
+
+      letter-spacing: 1px;
+
+      margin-bottom: 14px;
+    }
+
+
+    .character-card-stats {
+
+      display: flex;
+
+      flex-wrap: wrap;
+
+      gap:
+        6px
+        12px;
+
+      color: #89949e;
+
+      font-size: 10px;
+
+      letter-spacing: 0.7px;
+    }
+
+
+    .character-card-stats
+    span:first-child {
+
+      color: #66fcf1;
+
+      font-weight: 900;
+    }
+
+
+    /* ===============================================
+       CLASSIC COMING SOON
+    =============================================== */
+
+    .character-coming-soon {
+
+      grid-column:
+        1 /
+        -1;
+
+      height: 320px;
+
+      display: flex;
+
+      flex-direction: column;
+
+      align-items: center;
+      justify-content: center;
+
+      gap: 12px;
+
+      border:
+        1px dashed
+        #34414c;
+
+      border-radius: 14px;
+
+      background:
+        rgba(
+          9,
+          13,
+          19,
+          0.70
+        );
+
+      color: #66fcf1;
+
+      font-size: 24px;
+
+      font-weight: 900;
+
+      letter-spacing: 4px;
+    }
+
+
+    .character-coming-soon span {
+
+      color: #6f7c87;
+
+      font-size: 11px;
+
+      letter-spacing: 2px;
+    }
+
+
+    /* ===============================================
+       CHARACTER DETAIL OVERLAY
+    =============================================== */
+
+    #character-detail-overlay {
+
+      position: fixed;
+
+      inset: 0;
+
+      z-index: 15000;
+
+      display: none;
+
+      align-items: center;
+      justify-content: center;
+
+      padding: 30px;
+
+      background:
+        rgba(
+          2,
+          5,
+          9,
+          0.86
+        );
+
+      backdrop-filter:
+        blur(
+          8px
+        );
+    }
+
+
+    .character-detail-panel {
+
+      position: relative;
+
+      width:
+        min(
+          930px,
+          94vw
+        );
+
+      max-height:
+        90vh;
+
+      overflow-y: auto;
+
+      border:
+        1px solid
+        rgba(
+          102,
+          252,
+          241,
+          0.25
+        );
+
+      border-radius: 17px;
+
+      background:
+        linear-gradient(
+          145deg,
+          #151d27,
+          #090d13
+        );
+
+      box-shadow:
+        0
+        25px
+        70px
+        rgba(
+          0,
+          0,
+          0,
+          0.65
+        );
+
+      padding: 26px;
+    }
+
+
+    .character-detail-close {
+
+      position: absolute;
+
+      top: 14px;
+      right: 16px;
+
+      z-index: 2;
+
+      width: 36px;
+      height: 36px;
+
+      border: none;
+
+      border-radius: 50%;
+
+      background:
+        rgba(
+          255,
+          255,
+          255,
+          0.08
+        );
+
+      color: #fff;
+
+      cursor: pointer;
+
+      font-size: 17px;
+    }
+
+
+    .character-detail-close:hover {
+
+      background:
+        rgba(
+          255,
+          255,
+          255,
+          0.16
+        );
+    }
+
+
+    .character-detail-hero {
+
+      display: grid;
+
+      grid-template-columns:
+        230px
+        1fr;
+
+      gap: 28px;
+
+      align-items: center;
+
+      margin-bottom: 26px;
+    }
+
+
+    .character-detail-hero > img {
+
+      width: 230px;
+      height: 260px;
+
+      object-fit: cover;
+
+      object-position:
+        center
+        top;
+
+      border-radius: 12px;
+
+      border:
+        1px solid
+        rgba(
+          102,
+          252,
+          241,
+          0.22
+        );
+    }
+
+
+    .character-detail-heading h1 {
+
+      margin:
+        5px
+        0
+        14px;
+
+      color: #fff;
+
+      font-size: 34px;
+
+      letter-spacing: 2px;
+    }
+
+
+    .character-detail-rank-row {
+
+      display: flex;
+
+      align-items: center;
+
+      gap: 12px;
+
+      margin-bottom: 17px;
+    }
+
+
+    .character-detail-rank-row > div:last-child {
+
+      display: flex;
+
+      flex-direction: column;
+
+      gap: 3px;
+    }
+
+
+    .character-detail-rank-name {
+
+      color: #66fcf1;
+
+      font-size: 15px;
+
+      font-weight: 900;
+
+      letter-spacing: 2px;
+    }
+
+
+    .character-detail-rank-score {
+
+      color: #75828d;
+
+      font-size: 10px;
+
+      text-transform: uppercase;
+    }
+
+
+    .character-detail-summary {
+
+      display: flex;
+
+      flex-wrap: wrap;
+
+      gap: 8px;
+    }
+
+
+    .character-detail-summary span {
+
+      padding:
+        7px
+        11px;
+
+      background:
+        rgba(
+          255,
+          255,
+          255,
+          0.055
+        );
+
+      border-radius: 6px;
+
+      color: #b5bec6;
+
+      font-size: 10px;
+
+      letter-spacing: 0.8px;
+    }
+
+
+    .character-detail-mode-label {
+
+      color: #66fcf1;
+
+      font-size: 11px;
+
+      font-weight: 900;
+
+      letter-spacing: 2.5px;
+
+      border-bottom:
+        1px solid
+        #27313b;
+
+      padding-bottom: 10px;
+
+      margin-bottom: 11px;
+    }
+
+
+    .character-ability-detail {
+
+      display: grid;
+
+      grid-template-columns:
+        70px
+        1fr;
+
+      gap: 15px;
+
+      align-items: start;
+
+      padding:
+        16px
+        0;
+
+      border-bottom:
+        1px solid
+        #202932;
+    }
+
+
+    .character-ability-key {
+
+      height: 47px;
+
+      display: flex;
+
+      align-items: center;
+      justify-content: center;
+
+      border:
+        1px solid
+        #45a29e;
+
+      border-radius: 7px;
+
+      background: #121a22;
+
+      color: #66fcf1;
+
+      font-size: 12px;
+
+      font-weight: 900;
+    }
+
+
+    .character-ability-detail h3 {
+
+      color: #fff;
+
+      font-size: 17px;
+
+      letter-spacing: 1px;
+
+      margin-bottom: 5px;
+    }
+
+
+    .character-ability-detail p {
+
+      color: #9aa4ad;
+
+      font-size: 12px;
+
+      line-height: 1.65;
+    }
+
+
+    @media (
+      max-width:
+      700px
+    ) {
+
+      .character-detail-hero {
+
+        grid-template-columns:
+          1fr;
+      }
+
+
+      .character-detail-hero > img {
+
+        width: 100%;
+
+        height: 310px;
+      }
+    }
+
+  </style>
+
 </head>
 
 
 <body>
 
 
-  <!-- ==================================================
+  <!-- ================================================
        LOGIN
-  =================================================== -->
+  ================================================= -->
 
   <div
     id="login-screen"
@@ -106,9 +979,9 @@
   </div>
 
 
-  <!-- ==================================================
+  <!-- ================================================
        MAIN LOBBY
-  =================================================== -->
+  ================================================= -->
 
   <div
     id="lobby-screen"
@@ -160,6 +1033,22 @@
     </div>
 
 
+    <!-- CHARACTER HUB -->
+
+    <button
+      class="
+        btn
+        secondary-btn
+        characters-lobby-btn
+      "
+      onclick="openCharacterHub()"
+    >
+      CHARACTERS
+    </button>
+
+
+    <!-- GAME MODES -->
+
     <div class="mode-buttons">
 
       <button
@@ -182,9 +1071,129 @@
   </div>
 
 
-  <!-- ==================================================
+  <!-- ================================================
+       CHARACTER HUB
+  ================================================= -->
+
+  <div
+    id="character-hub-screen"
+    class="screen"
+    style="display:none;"
+  >
+
+    <div class="character-hub-header">
+
+      <div>
+
+        <div class="character-hub-title">
+          CHARACTERS
+        </div>
+
+
+        <div class="character-hub-subtitle">
+          AGENT ARCHIVE • ABILITIES & PROFICIENCY
+        </div>
+
+      </div>
+
+
+      <div class="character-mode-tabs">
+
+        <button
+          id="character-tab-pvp"
+          class="character-mode-tab active"
+          onclick="
+            switchCharacterHubMode(
+              'pvp'
+            )
+          "
+        >
+          PVP ARENA
+        </button>
+
+
+        <button
+          id="character-tab-classic"
+          class="character-mode-tab"
+          onclick="
+            switchCharacterHubMode(
+              'classic'
+            )
+          "
+        >
+          CLASSIC MATCH
+        </button>
+
+      </div>
+
+    </div>
+
+
+    <div
+      id="character-mode-notice"
+    ></div>
+
+
+    <div
+      id="character-hub-grid"
+    ></div>
+
+
+    <button
+      class="
+        btn
+        bottom-left
+        secondary-btn
+      "
+      onclick="
+        showScreen(
+          'lobby-screen'
+        )
+      "
+    >
+      BACK TO LOBBY
+    </button>
+
+  </div>
+
+
+  <!-- ================================================
+       CHARACTER DETAIL OVERLAY
+  ================================================= -->
+
+  <div
+    id="character-detail-overlay"
+    onclick="
+      if (
+        event.target === this
+      ) {
+        closeCharacterDetail()
+      }
+    "
+  >
+
+    <div class="character-detail-panel">
+
+      <button
+        class="character-detail-close"
+        onclick="closeCharacterDetail()"
+      >
+        ✕
+      </button>
+
+
+      <div
+        id="character-detail-content"
+      ></div>
+
+    </div>
+
+  </div>
+
+
+  <!-- ================================================
        PROFILE
-  =================================================== -->
+  ================================================= -->
 
   <div
     id="profile-screen"
@@ -196,7 +1205,11 @@
 
       <button
         class="close-btn"
-        onclick="showScreen('lobby-screen')"
+        onclick="
+          showScreen(
+            'lobby-screen'
+          )
+        "
       >
         ✕
       </button>
@@ -209,14 +1222,19 @@
           id="pfp-wrapper"
           onclick="
             document
-              .getElementById('pfp-file-input')
+              .getElementById(
+                'pfp-file-input'
+              )
               .click()
           "
         >
 
           <div
             id="profile-page-pfp"
-            class="round-pfp large-pfp"
+            class="
+              round-pfp
+              large-pfp
+            "
           >
             ?
           </div>
@@ -239,7 +1257,11 @@
           id="pfp-file-input"
           accept="image/*"
           style="display:none;"
-          onchange="handlePfpUpload(event)"
+          onchange="
+            handlePfpUpload(
+              event
+            )
+          "
         >
 
 
@@ -309,9 +1331,9 @@
   </div>
 
 
-  <!-- ==================================================
+  <!-- ================================================
        FRIENDS
-  =================================================== -->
+  ================================================= -->
 
   <div
     id="friends-screen"
@@ -323,7 +1345,11 @@
 
       <button
         class="close-btn"
-        onclick="showScreen('lobby-screen')"
+        onclick="
+          showScreen(
+            'lobby-screen'
+          )
+        "
       >
         ✕
       </button>
@@ -339,7 +1365,11 @@
         <button
           class="tab-btn active"
           id="tab-btn-list"
-          onclick="switchFriendsTab('list')"
+          onclick="
+            switchFriendsTab(
+              'list'
+            )
+          "
         >
           MY FRIENDS
         </button>
@@ -348,7 +1378,11 @@
         <button
           class="tab-btn"
           id="tab-btn-search"
-          onclick="switchFriendsTab('search')"
+          onclick="
+            switchFriendsTab(
+              'search'
+            )
+          "
         >
           FIND FRIENDS
         </button>
@@ -357,7 +1391,11 @@
         <button
           class="tab-btn"
           id="tab-btn-requests"
-          onclick="switchFriendsTab('requests')"
+          onclick="
+            switchFriendsTab(
+              'requests'
+            )
+          "
         >
           REQUESTS
 
@@ -376,7 +1414,10 @@
 
       <div
         id="tab-content-list"
-        class="tab-content active"
+        class="
+          tab-content
+          active
+        "
       >
 
         <div
@@ -400,7 +1441,10 @@
             class="input-field"
             placeholder="Exact username..."
             onkeyup="
-              if(event.key === 'Enter') {
+              if (
+                event.key ===
+                'Enter'
+              ) {
                 searchUsers()
               }
             "
@@ -410,7 +1454,9 @@
           <button
             class="btn"
             style="
-              padding:10px 20px;
+              padding:
+                10px
+                20px;
             "
             onclick="searchUsers()"
           >
@@ -445,9 +1491,9 @@
   </div>
 
 
-  <!-- ==================================================
+  <!-- ================================================
        SQUAD LOBBY
-  =================================================== -->
+  ================================================= -->
 
   <div
     id="team-screen"
@@ -455,7 +1501,12 @@
     style="display:none;"
   >
 
-    <div class="lobby-header squad-header-row">
+    <div
+      class="
+        lobby-header
+        squad-header-row
+      "
+    >
 
       <div>
 
@@ -482,7 +1533,6 @@
         four-player-team-container
       "
     >
-
 
       <!-- SLOT 1 -->
 
@@ -621,17 +1671,28 @@
 
 
     <button
-      class="btn bottom-left secondary-btn"
-      onclick="returnToMainLobby()"
+      class="
+        btn
+        bottom-left
+        secondary-btn
+      "
+      onclick="
+        returnToMainLobby()
+      "
     >
       BACK TO LOBBY
     </button>
 
 
     <button
-      class="btn bottom-right"
+      class="
+        btn
+        bottom-right
+      "
       id="start-character-btn"
-      onclick="startCharacterSelect()"
+      onclick="
+        startCharacterSelect()
+      "
     >
       CHARACTER SELECT
     </button>
@@ -639,9 +1700,9 @@
   </div>
 
 
-  <!-- ==================================================
+  <!-- ================================================
        CHARACTER SELECT
-  =================================================== -->
+  ================================================= -->
 
   <div
     id="char-screen"
@@ -649,7 +1710,12 @@
     style="display:none;"
   >
 
-    <div class="lobby-header character-header-row">
+    <div
+      class="
+        lobby-header
+        character-header-row
+      "
+    >
 
       <div>
 
@@ -668,7 +1734,12 @@
       </div>
 
 
-      <div class="team-preview character-status-panel">
+      <div
+        class="
+          team-preview
+          character-status-panel
+        "
+      >
 
         <strong id="my-pick-display">
           You: Selecting...
@@ -723,7 +1794,11 @@
       <div
         class="card"
         id="card-cheng"
-        onclick="selectCharacter('cheng_xiaoshi')"
+        onclick="
+          selectCharacter(
+            'cheng_xiaoshi'
+          )
+        "
       >
 
         <h3>
@@ -748,12 +1823,16 @@
       </div>
 
 
-      <!-- LU GUANG -->
+      <!-- LU -->
 
       <div
         class="card"
         id="card-lu"
-        onclick="selectCharacter('lu_guang')"
+        onclick="
+          selectCharacter(
+            'lu_guang'
+          )
+        "
       >
 
         <h3>
@@ -771,8 +1850,9 @@
 
 
         <p>
-          Tracks target trajectories across the
-          12-hour window. Strategic vision.
+          Tracks target trajectories across
+          the 12-hour window.
+          Strategic vision.
         </p>
 
       </div>
@@ -789,9 +1869,14 @@
 
 
     <button
-      class="btn bottom-right"
+      class="
+        btn
+        bottom-right
+      "
       id="ready-character-btn"
-      onclick="readyCharacter()"
+      onclick="
+        readyCharacter()
+      "
       disabled
     >
       READY
@@ -800,17 +1885,14 @@
   </div>
 
 
-  <!-- ==================================================
+  <!-- ================================================
        ARENA HUD
-  =================================================== -->
+  ================================================= -->
 
   <div
     id="ui-layer"
     style="display:none;"
   >
-
-
-    <!-- TOP LEFT -->
 
     <div class="arena-title-hud">
 
@@ -839,13 +1921,9 @@
     </div>
 
 
-    <!-- BOTTOM RIGHT -->
-
     <div class="combat-controls-hud">
 
-
       <div class="ability-list">
-
 
         <!-- SPACE -->
 
@@ -985,7 +2063,9 @@
           action-btn-danger
           abort-button
         "
-        onclick="leaveGame()"
+        onclick="
+          leaveGame()
+        "
       >
         ABORT MISSION
       </button>
@@ -1006,17 +2086,33 @@
   ></canvas>
 
 
-  <!-- ==================================================
-       JS — LOAD IN THIS ORDER
-  =================================================== -->
+  <!-- ================================================
+       SCRIPT ORDER
+  ================================================= -->
 
-  <script src="/js/app.js"></script>
+  <script
+    src="/js/app.js"
+  ></script>
 
-  <script src="/js/social.js"></script>
 
-  <script src="/js/squad.js"></script>
+  <script
+    src="/js/social.js"
+  ></script>
 
-  <script src="/js/arena.js"></script>
+
+  <script
+    src="/js/squad.js"
+  ></script>
+
+
+  <script
+    src="/js/characterHub.js"
+  ></script>
+
+
+  <script
+    src="/js/arena.js"
+  ></script>
 
 
 </body>

@@ -103,10 +103,53 @@ app.use(
 );
 
 
+// ============================================
+// STATIC FILES
+// ============================================
+
+/*
+  Serve the public folder.
+
+  __dirname is the server folder,
+  so ../public points to:
+
+  project/public/
+*/
+
 app.use(
 
   express.static(
-    'public'
+
+    path.join(
+      __dirname,
+      '../public'
+    )
+  )
+);
+
+
+/*
+  Serve the separate assets folder.
+
+  This makes:
+
+  project/assets/lobby_background.jpg
+
+  available in the browser as:
+
+  /assets/lobby_background.jpg
+*/
+
+app.use(
+
+  '/assets',
+
+  express.static(
+
+    path.join(
+      __dirname,
+      '../assets'
+    )
   )
 );
 
