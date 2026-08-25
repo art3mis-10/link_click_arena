@@ -343,8 +343,11 @@ async function openProfileScreen(
 
     const response =
       await fetch(
+
         `/api/profile/${encodeURIComponent(
           usernameToFetch
+        )}?viewer=${encodeURIComponent(
+          playerName
         )}`
       );
 
@@ -375,7 +378,8 @@ async function openProfileScreen(
         'profile-stat-matches'
       )
       .innerText =
-        data.matchesPlayed || 0;
+        data.matchesPlayed ||
+        0;
 
 
     document
@@ -383,7 +387,8 @@ async function openProfileScreen(
         'profile-stat-friends'
       )
       .innerText =
-        data.friendsCount || 0;
+        data.friendsCount ||
+        0;
 
 
     const badge =
@@ -415,6 +420,7 @@ async function openProfileScreen(
     if (data.avatar) {
 
       profilePfp.innerHTML = `
+
         <img
           src="${data.avatar}"
           alt="${data.username}"
@@ -425,6 +431,7 @@ async function openProfileScreen(
             border-radius:50%;
           "
         >
+
       `;
 
     } else {
@@ -436,32 +443,72 @@ async function openProfileScreen(
     }
 
 
+    // ============================================
+    // FRIEND ACTION
+    // ============================================
+
     const actionBox =
       document.getElementById(
         'profile-action-container'
       );
 
 
-    actionBox.innerHTML =
+    if (
       isOwnProfile
-        ? ''
-        : `
-          <button
-            class="btn"
-            style="
-              width:100%;
-              font-size:14px;
-              padding:12px;
-            "
-            onclick="
-              sendFriendRequest(
-                '${data.username}'
-              )
-            "
-          >
-            ADD FRIEND
-          </button>
-        `;
+    ) {
+
+      actionBox.innerHTML =
+        '';
+
+    } else if (
+      data.isFriend
+    ) {
+
+      /*
+        NO ADD FRIEND BUTTON
+        for existing friends.
+      */
+
+      actionBox.innerHTML = `
+
+        <div class="profile-friend-confirmed">
+          ✓ FRIEND
+        </div>
+
+      `;
+
+    } else {
+
+      actionBox.innerHTML = `
+
+        <button
+          class="btn"
+          style="
+            width:100%;
+            font-size:14px;
+            padding:12px;
+          "
+          onclick="
+            sendFriendRequest(
+              '${data.username}'
+            )
+          "
+        >
+          ADD FRIEND
+        </button>
+
+      `;
+    }
+
+
+    // ============================================
+    // CHARACTER SHOWCASE
+    // ============================================
+
+    renderProfileShowcase(
+      data,
+      isOwnProfile
+    );
 
 
     showScreen(
@@ -470,8 +517,460 @@ async function openProfileScreen(
 
   } catch (error) {
 
+    console.error(
+      error
+    );
+
+
     alert(
       'Error fetching user profile'
+    );
+  }
+}
+
+let editingShowcase =
+  [];
+
+
+function characterProfileImage(
+  character
+) {
+
+  if (
+    character ===
+      'cheng_xiaoshi'
+  ) {
+
+    return '/assets/chengXiaoshi.jpg';
+  }
+
+
+  if (
+    character ===
+      'lu_guang'
+  ) {
+
+    return '/assets/luGuang.jpg';
+  }
+
+
+  return '';
+}
+
+
+function profileCharacterScore(
+  profileData,
+  character
+) {
+
+  return Number(
+
+    profileData
+      .characterStats?.[
+        character
+      ]?.proficiencyPoints
+
+  ) || 0;
+}
+
+
+// ============================================
+// RENDER PROFILE SHOWCASE
+// ============================================
+
+function renderProfileShowcase(
+  profileData,
+  isOwnProfile
+) {
+
+  const holder =
+    document.getElementById(
+      'profile-showcase'
+    );
+
+
+  const editArea =
+    document.getElementById(
+      'profile-showcase-editor'
+    );
+
+
+  if (
+    !holder ||
+    !editArea
+  ) {
+
+    return;
+  }
+
+
+  const showcased =
+    profileData
+      .showcasedCharacters ||
+    [];
+
+
+  holder.innerHTML =
+    '';
+
+
+  /*
+    Always render exactly 3 slots.
+  */
+
+  for (
+    let index = 0;
+    index < 3;
+    index += 1
+  ) {
+
+    const character =
+      showcased[
+        index
+      ] ||
+      null;
+
+
+    const slot =
+      document.createElement(
+        'div'
+      );
+
+
+    slot.className =
+      'profile-showcase-slot';
+
+
+    if (!character) {
+
+      slot.innerHTML = `
+
+        <div class="profile-showcase-empty">
+          EMPTY
+        </div>
+
+      `;
+
+
+      holder.appendChild(
+        slot
+      );
+
+
+      continue;
+    }
+
+
+    slot.innerHTML = `
+
+      <img
+        src="${characterProfileImage(
+          character
+        )}"
+        alt=""
+      >
+
+      <div class="profile-showcase-badge"></div>
+
+    `;
+
+
+    const badgeHolder =
+      slot.querySelector(
+        '.profile-showcase-badge'
+      );
+
+
+    if (
+      typeof createProficiencyIcon ===
+        'function'
+    ) {
+
+      badgeHolder.appendChild(
+
+        createProficiencyIcon(
+
+          profileCharacterScore(
+            profileData,
+            character
+          ),
+
+          46
+        )
+      );
+    }
+
+
+    holder.appendChild(
+      slot
+    );
+  }
+
+
+  /*
+    Only profile owner may edit.
+  */
+
+  if (
+    !isOwnProfile
+  ) {
+
+    editArea.innerHTML =
+      '';
+
+    return;
+  }
+
+
+  editingShowcase =
+    [
+      ...showcased
+    ];
+
+
+  editArea.innerHTML = `
+
+    <button
+      class="action-btn-sm"
+      onclick="
+        openShowcaseEditor()
+      "
+    >
+      EDIT SHOWCASE
+    </button>
+
+  `;
+}
+
+function openShowcaseEditor() {
+
+  const editor =
+    document.getElementById(
+      'showcase-picker'
+    );
+
+
+  editor.style.display =
+    'grid';
+
+
+  renderShowcasePicker();
+}
+
+
+function closeShowcaseEditor() {
+
+  document
+    .getElementById(
+      'showcase-picker'
+    )
+    .style.display =
+      'none';
+}
+
+
+function renderShowcasePicker() {
+
+  const picker =
+    document.getElementById(
+      'showcase-picker-list'
+    );
+
+
+  const characters = [
+
+    {
+      id:
+        'cheng_xiaoshi',
+
+      image:
+        '/assets/chengXiaoshi.jpg'
+    },
+
+    {
+      id:
+        'lu_guang',
+
+      image:
+        '/assets/luGuang.jpg'
+    }
+  ];
+
+
+  picker.innerHTML =
+    '';
+
+
+  characters.forEach(
+    character => {
+
+      const selected =
+        editingShowcase.includes(
+          character.id
+        );
+
+
+      const button =
+        document.createElement(
+          'button'
+        );
+
+
+      button.className =
+        `showcase-picker-character ${
+          selected
+            ? 'selected'
+            : ''
+        }`;
+
+
+      button.innerHTML = `
+
+        <img
+          src="${character.image}"
+          alt=""
+        >
+
+        ${
+          selected
+            ? '<div class="showcase-selected-mark">✓</div>'
+            : ''
+        }
+
+      `;
+
+
+      button.onclick =
+        () => {
+
+          toggleShowcaseCharacter(
+            character.id
+          );
+        };
+
+
+      picker.appendChild(
+        button
+      );
+    }
+  );
+}
+
+
+function toggleShowcaseCharacter(
+  character
+) {
+
+  const existingIndex =
+    editingShowcase.indexOf(
+      character
+    );
+
+
+  /*
+    Clicking an already selected
+    character DESELECTS it.
+  */
+
+  if (
+    existingIndex !==
+    -1
+  ) {
+
+    editingShowcase.splice(
+      existingIndex,
+      1
+    );
+
+
+    renderShowcasePicker();
+
+
+    return;
+  }
+
+
+  /*
+    Maximum 3.
+  */
+
+  if (
+    editingShowcase.length >=
+    3
+  ) {
+
+    return;
+  }
+
+
+  editingShowcase.push(
+    character
+  );
+
+
+  renderShowcasePicker();
+}
+
+
+async function saveCharacterShowcase() {
+
+  try {
+
+    const response =
+      await fetch(
+        '/api/profile/showcase',
+        {
+
+          method:
+            'POST',
+
+          headers: {
+            'Content-Type':
+              'application/json'
+          },
+
+          body:
+            JSON.stringify({
+
+              username:
+                playerName,
+
+              characters:
+                editingShowcase
+            })
+        }
+      );
+
+
+    const data =
+      await response.json();
+
+
+    if (
+      !response.ok
+    ) {
+
+      return alert(
+        data.message ||
+        'Could not save showcase.'
+      );
+    }
+
+
+    closeShowcaseEditor();
+
+
+    /*
+      Reload own profile so badges/slots
+      immediately refresh.
+    */
+
+    openProfileScreen();
+
+  } catch (error) {
+
+    alert(
+      'Could not save showcase.'
     );
   }
 }

@@ -13,7 +13,7 @@ const CHARACTER_HUB_DATA = {
         'CHENG XIAOSHI',
   
       role:
-        'COMBATER',
+        'TANK',
   
       image:
         '/assets/chengXiaoshi.jpg',
@@ -75,7 +75,7 @@ const CHARACTER_HUB_DATA = {
         'LU GUANG',
   
       role:
-        'OBSERVER',
+        'ARCHER',
   
       image:
         '/assets/luGuang.jpg',
@@ -96,7 +96,7 @@ const CHARACTER_HUB_DATA = {
             'LASER',
   
           description:
-            'Automatically targets the closest living opponent within 10 world units. Deals 25 damage and fires up to 4 times per second. Lasers travel at 70 world units per second and can technically be dodged. Laser cannot be used when no opponent is within range.'
+            'Automatically targets the closest living opponent within 15 world units. Deals 25 damage and fires up to 4 times per second. Lasers travel at 80 world units per second and can technically be dodged. Laser cannot be used when no opponent is within range.'
         },
   
   

@@ -252,11 +252,11 @@ function openFriendsScreen() {
   
   
       if (!results.length) {
-  
-        listEl.innerHTML =
-          '<p class="muted-center">No exact username found.</p>';
-  
-        return;
+        listEl.innerHTML = `
+        
+          <p class="muted-center">No available user found.</p>`;
+        
+          return;
       }
   
   

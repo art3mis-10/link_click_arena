@@ -302,9 +302,7 @@
         #66fcf1;
 
       box-shadow:
-        0
-        0
-        24px
+        0 0 24px
         rgba(
           102,
           252,
@@ -1322,6 +1320,82 @@
       </div>
 
 
+      <div class="profile-showcase-section">
+
+        <div class="profile-showcase-header">
+
+          <span>
+            CHARACTER SHOWCASE
+          </span>
+
+          <div
+            id="profile-showcase-editor"
+          ></div>
+
+        </div>
+
+
+        <div
+          id="profile-showcase"
+          class="profile-showcase"
+        ></div>
+
+      </div>
+
+
+      <!-- SHOWCASE CHARACTER PICKER -->
+
+      <div
+        id="showcase-picker"
+        class="showcase-picker"
+        style="display:none;"
+      >
+
+        <div class="showcase-picker-panel">
+
+          <div class="showcase-picker-header">
+
+            <div>
+
+              <h3>
+                SHOWCASE CHARACTERS
+              </h3>
+
+              <span>
+                Select up to 3
+              </span>
+
+            </div>
+
+
+            <button
+              class="close-btn"
+              onclick="closeShowcaseEditor()"
+            >
+              ✕
+            </button>
+
+          </div>
+
+
+          <div
+            id="showcase-picker-list"
+            class="showcase-picker-list"
+          ></div>
+
+
+          <button
+            class="btn"
+            onclick="saveCharacterShowcase()"
+          >
+            SAVE SHOWCASE
+          </button>
+
+        </div>
+
+      </div>
+
+
       <div
         id="profile-action-container"
       ></div>
@@ -1786,76 +1860,57 @@
     ></div>
 
 
-    <div class="char-container">
+    <!-- ==========================================
+         CHARACTER PHOTO GRID
+    =========================================== -->
 
+    <div
+      class="
+        char-container
+        character-photo-grid
+      "
+    >
 
-      <!-- CHENG -->
+      <!-- CHENG XIAOSHI -->
 
-      <div
-        class="card"
+      <button
+        class="character-photo-card"
         id="card-cheng"
+        type="button"
         onclick="
-          selectCharacter(
+          openCharacterSelectPreview(
             'cheng_xiaoshi'
           )
         "
       >
 
-        <h3>
-          CHENG XIAOSHI
-        </h3>
+        <img
+          src="/assets/chengXiaoshi.jpg"
+          alt="Cheng Xiaoshi"
+        >
+
+      </button>
 
 
-        <p>
+      <!-- LU GUANG -->
 
-          <strong>
-            ROLE: COMBATER
-          </strong>
-
-        </p>
-
-
-        <p>
-          Enters photo dimensions directly.
-          High mobility combat specialist.
-        </p>
-
-      </div>
-
-
-      <!-- LU -->
-
-      <div
-        class="card"
+      <button
+        class="character-photo-card"
         id="card-lu"
+        type="button"
         onclick="
-          selectCharacter(
+          openCharacterSelectPreview(
             'lu_guang'
           )
         "
       >
 
-        <h3>
-          LU GUANG
-        </h3>
+        <img
+          src="/assets/luGuang.jpg"
+          alt="Lu Guang"
+        >
 
-
-        <p>
-
-          <strong>
-            ROLE: OBSERVER
-          </strong>
-
-        </p>
-
-
-        <p>
-          Tracks target trajectories across
-          the 12-hour window.
-          Strategic vision.
-        </p>
-
-      </div>
+      </button>
 
     </div>
 
@@ -1864,9 +1919,11 @@
       id="character-select-message"
       class="character-select-message"
     >
-      Choose a character.
+      Click a character to view their information.
     </div>
 
+
+    <!-- EXISTING READY / LOCK BUTTON -->
 
     <button
       class="
@@ -1881,6 +1938,162 @@
     >
       READY
     </button>
+
+
+    <!-- ==========================================
+         CHARACTER SELECTION PREVIEW
+    =========================================== -->
+
+    <div
+      id="character-select-preview-overlay"
+      class="character-select-preview-overlay"
+      style="display:none;"
+    >
+
+      <div class="character-select-preview-panel">
+
+        <!-- TOP -->
+
+        <div class="character-select-preview-top">
+
+          <div>
+
+            <div
+              id="character-preview-role"
+              class="character-preview-role"
+            >
+              ROLE
+            </div>
+
+
+            <h2
+              id="character-preview-name"
+              class="character-preview-name"
+            >
+              CHARACTER
+            </h2>
+
+          </div>
+
+
+          <button
+            class="character-preview-x"
+            type="button"
+            onclick="
+              closeCharacterSelectPreview()
+            "
+          >
+            ✕
+          </button>
+
+        </div>
+
+
+        <!-- BODY -->
+
+        <div class="character-preview-body">
+
+
+          <!-- CHARACTER IMAGE -->
+
+          <div class="character-preview-art-wrap">
+
+            <img
+              id="character-preview-image"
+              class="character-preview-image"
+              src=""
+              alt=""
+            >
+
+          </div>
+
+
+          <!-- CHARACTER INFO -->
+
+          <div class="character-preview-info">
+
+
+            <!-- PROFICIENCY -->
+
+            <div class="character-preview-proficiency">
+
+              <div
+                id="character-preview-badge"
+                class="character-preview-badge"
+              ></div>
+
+
+              <div>
+
+                <div
+                  id="character-preview-rank"
+                  class="character-preview-rank"
+                >
+                  BRONZE
+                </div>
+
+
+                <div
+                  id="character-preview-score"
+                  class="character-preview-score"
+                >
+                  0 PROFICIENCY
+                </div>
+
+              </div>
+
+            </div>
+
+
+            <!-- SHORT DESCRIPTION -->
+
+            <p
+              id="character-preview-description"
+              class="character-preview-description"
+            ></p>
+
+          </div>
+
+        </div>
+
+
+        <!-- ACTIONS -->
+
+        <div class="character-preview-actions">
+
+          <button
+            class="
+              btn
+              secondary-btn
+              character-preview-action
+            "
+            type="button"
+            onclick="
+              closeCharacterSelectPreview()
+            "
+          >
+            CANCEL
+          </button>
+
+
+          <button
+            class="
+              btn
+              character-preview-action
+            "
+            type="button"
+            onclick="
+              confirmCharacterPreviewSelection()
+            "
+          >
+            SELECT
+          </button>
+
+        </div>
+
+      </div>
+
+    </div>
 
   </div>
 

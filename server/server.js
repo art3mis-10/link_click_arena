@@ -2528,6 +2528,81 @@ app.get(
       }
 
 
+      const viewerUsername =
+        req.query.viewer ||
+        null;
+
+
+      let isFriend =
+        false;
+
+
+      if (
+        viewerUsername &&
+        viewerUsername !==
+          user.username
+      ) {
+
+        const viewer =
+          await User
+            .findOne({
+              username:
+                viewerUsername
+            })
+            .select(
+              'friends'
+            );
+
+
+        if (viewer) {
+
+          isFriend =
+            viewer.friends.some(
+              friendId =>
+
+                friendId.toString() ===
+                user._id.toString()
+            );
+        }
+      }
+
+
+      const characterStats =
+        {};
+
+
+      if (
+        user.characterStats
+      ) {
+
+        for (
+          const [
+            character,
+            stats
+          ]
+          of user.characterStats.entries()
+        ) {
+
+          characterStats[
+            character
+          ] = {
+
+            pvpMatches:
+              stats.pvpMatches ||
+              0,
+
+            pvpWins:
+              stats.pvpWins ||
+              0,
+
+            proficiencyPoints:
+              stats.proficiencyPoints ||
+              0
+          };
+        }
+      }
+
+
       res.json({
 
         username:
@@ -2549,16 +2624,178 @@ app.get(
         isOnline:
           onlineUsers.has(
             user.username
-          )
+          ),
+
+        isFriend,
+
+        showcasedCharacters:
+          user.showcasedCharacters ||
+          [],
+
+        characterStats
       });
 
     } catch (error) {
+
+      console.error(
+        'Profile error:',
+        error
+      );
+
 
       res
         .status(500)
         .json({
           message:
             'Server error fetching profile'
+        });
+    }
+  }
+);
+
+// ============================================
+// UPDATE CHARACTER SHOWCASE
+// ============================================
+
+app.post(
+  '/api/profile/showcase',
+  async (
+    req,
+    res
+  ) => {
+
+    try {
+
+      const {
+        username,
+        characters
+      } =
+        req.body;
+
+
+      if (
+        !username ||
+        !Array.isArray(
+          characters
+        )
+      ) {
+
+        return res
+          .status(400)
+          .json({
+            message:
+              'Invalid showcase data'
+          });
+      }
+
+
+      /*
+        Remove duplicates.
+      */
+
+      const uniqueCharacters =
+        [
+          ...new Set(
+            characters
+          )
+        ];
+
+
+      if (
+        uniqueCharacters.length >
+        3
+      ) {
+
+        return res
+          .status(400)
+          .json({
+            message:
+              'You can showcase at most 3 characters.'
+          });
+      }
+
+
+      /*
+        Only characters actually
+        supported by the game.
+      */
+
+      const invalidCharacter =
+        uniqueCharacters.find(
+          character =>
+
+            !validCharacter(
+              character
+            )
+        );
+
+
+      if (
+        invalidCharacter
+      ) {
+
+        return res
+          .status(400)
+          .json({
+            message:
+              'Invalid character'
+          });
+      }
+
+
+      const user =
+        await User
+          .findOneAndUpdate(
+
+            {
+              username
+            },
+
+            {
+              showcasedCharacters:
+                uniqueCharacters
+            },
+
+            {
+              new:
+                true
+            }
+          );
+
+
+      if (!user) {
+
+        return res
+          .status(404)
+          .json({
+            message:
+              'User not found'
+          });
+      }
+
+
+      res.json({
+
+        success:
+          true,
+
+        showcasedCharacters:
+          user.showcasedCharacters
+      });
+
+    } catch (error) {
+
+      console.error(
+        'Showcase update error:',
+        error
+      );
+
+
+      res
+        .status(500)
+        .json({
+          message:
+            'Failed to update showcase'
         });
     }
   }
@@ -2720,6 +2957,10 @@ app.get(
 // EXACT FRIEND SEARCH
 // ============================================
 
+// ============================================
+// EXACT FRIEND SEARCH
+// ============================================
+
 app.get(
   '/api/friends/search',
   async (
@@ -2736,7 +2977,8 @@ app.get(
 
     if (
       !query ||
-      query.trim() === ''
+      query.trim() ===
+        ''
     ) {
 
       return res.json([]);
@@ -2749,20 +2991,54 @@ app.get(
         query.trim();
 
 
-      const user =
-        await User
-          .findOne({
-            username:
-              searchedUsername
-          })
-          .select(
-            'username avatar'
-          );
+      /*
+        Find both the person searching
+        and the exact target.
+      */
 
+      const [
+        searchingUser,
+        targetUser
+      ] =
+        await Promise.all([
+
+          User
+            .findOne({
+              username
+            })
+            .select(
+              'friends'
+            ),
+
+          User
+            .findOne({
+              username:
+                searchedUsername
+            })
+            .select(
+              'username avatar'
+            )
+        ]);
+
+
+      /*
+        Target does not exist.
+      */
 
       if (
-        !user ||
-        user.username ===
+        !targetUser
+      ) {
+
+        return res.json([]);
+      }
+
+
+      /*
+        Never return yourself.
+      */
+
+      if (
+        targetUser.username ===
           username
       ) {
 
@@ -2770,19 +3046,55 @@ app.get(
       }
 
 
+      /*
+        If already friends,
+        DO NOT return this person
+        in Find Friends.
+      */
+
+      if (
+        searchingUser
+      ) {
+
+        const alreadyFriend =
+          searchingUser
+            .friends
+            .some(
+              friendId =>
+
+                friendId.toString() ===
+                targetUser._id.toString()
+            );
+
+
+        if (
+          alreadyFriend
+        ) {
+
+          return res.json([]);
+        }
+      }
+
+
       res.json([
         {
 
           username:
-            user.username,
+            targetUser.username,
 
           avatar:
-            user.avatar ||
+            targetUser.avatar ||
             ''
         }
       ]);
 
     } catch (error) {
+
+      console.error(
+        'Friend search error:',
+        error
+      );
+
 
       res
         .status(500)

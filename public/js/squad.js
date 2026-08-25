@@ -6,8 +6,15 @@ let selectedCharacter = null;
 
 let characterReady = false;
 
+let previewCharacter = null;
+
+let previewProfileStats = null;
+
+
 let matchCharacterState = {
+
   selections: {},
+
   ready: {}
 };
 
@@ -23,6 +30,7 @@ function setupInviteBannerDOM() {
       'squad-invite-banner'
     )
   ) {
+
     return;
   }
 
@@ -57,6 +65,7 @@ function setupInviteBannerDOM() {
           id="invite-banner-text"
           class="invite-banner-text"
         ></div>
+
 
         <div
           id="invite-banner-mode"
@@ -99,7 +108,13 @@ function setupInviteBannerDOM() {
 }
 
 
-function showInviteBanner(data) {
+// ============================================
+// SHOW INVITE
+// ============================================
+
+function showInviteBanner(
+  data
+) {
 
   setupInviteBannerDOM();
 
@@ -133,12 +148,17 @@ function showInviteBanner(data) {
 
 
   mode.innerText =
-    data.mode === 'pvp'
+    data.mode ===
+      'pvp'
+
       ? 'PVP ARENA • up to 4 players'
+
       : 'MATCH • 2 players';
 
 
-  if (data.inviterAvatar) {
+  if (
+    data.inviterAvatar
+  ) {
 
     pfp.innerHTML = `
 
@@ -158,15 +178,20 @@ function showInviteBanner(data) {
   } else {
 
     pfp.innerText =
-      data.inviterUsername
-        .charAt(0)
+      data
+        .inviterUsername
+        .charAt(
+          0
+        )
         .toUpperCase();
   }
 
 
   banner
     .classList
-    .add('visible');
+    .add(
+      'visible'
+    );
 
 
   document
@@ -179,6 +204,7 @@ function showInviteBanner(data) {
         socket.emit(
           'accept_squad_invite',
           {
+
             hostUsername:
               data.hostUsername
           }
@@ -187,7 +213,9 @@ function showInviteBanner(data) {
 
         banner
           .classList
-          .remove('visible');
+          .remove(
+            'visible'
+          );
       };
 
 
@@ -200,7 +228,9 @@ function showInviteBanner(data) {
 
         banner
           .classList
-          .remove('visible');
+          .remove(
+            'visible'
+          );
       };
 }
 
@@ -217,7 +247,9 @@ socket.on(
 
 socket.on(
   'joined_squad',
-  ({ mode }) => {
+  ({
+    mode
+  }) => {
 
     currentMode =
       mode;
@@ -239,15 +271,18 @@ socket.on(
 
 
 // ============================================
-// HOST DISBANDED SQUAD
+// SQUAD DISBANDED
 // ============================================
 
 socket.on(
   'squad_disbanded',
-  ({ message }) => {
+  ({
+    message
+  }) => {
 
     currentSquad =
       null;
+
 
     currentMode =
       null;
@@ -258,8 +293,13 @@ socket.on(
     );
 
 
-    if (message) {
-      alert(message);
+    if (
+      message
+    ) {
+
+      alert(
+        message
+      );
     }
   }
 );
@@ -271,7 +311,9 @@ socket.on(
 
 socket.on(
   'squad_error',
-  ({ message }) => {
+  ({
+    message
+  }) => {
 
     alert(
       message ||
@@ -282,7 +324,7 @@ socket.on(
 
 
 // ============================================
-// RENDER SQUAD SLOT
+// RENDER SQUAD MEMBER
 // ============================================
 
 function renderSquadMember(
@@ -320,21 +362,28 @@ function renderSquadMember(
     !role ||
     !slot
   ) {
+
     return;
   }
 
 
-  if (!member) {
+  if (
+    !member
+  ) {
 
     slot
       .classList
-      .remove('filled');
+      .remove(
+        'filled'
+      );
 
 
     pfp.innerHTML = `
+
       <span class="plus-symbol">
         +
       </span>
+
     `;
 
 
@@ -352,7 +401,9 @@ function renderSquadMember(
 
   slot
     .classList
-    .add('filled');
+    .add(
+      'filled'
+    );
 
 
   name.innerText =
@@ -360,12 +411,17 @@ function renderSquadMember(
 
 
   role.innerText =
-    slotIndex === 1
+    slotIndex ===
+      1
+
       ? 'PARTY LEADER'
+
       : 'SQUAD MEMBER';
 
 
-  if (member.avatar) {
+  if (
+    member.avatar
+  ) {
 
     pfp.innerHTML = `
 
@@ -385,18 +441,23 @@ function renderSquadMember(
   } else {
 
     pfp.innerText =
-      member.username
-        .charAt(0)
+      member
+        .username
+        .charAt(
+          0
+        )
         .toUpperCase();
   }
 }
 
 
 // ============================================
-// RENDER WHOLE SQUAD
+// RENDER SQUAD
 // ============================================
 
-function renderSquadState(data) {
+function renderSquadState(
+  data
+) {
 
   currentSquad =
     data;
@@ -416,8 +477,12 @@ function renderSquadState(data) {
       'squad-mode-title'
     )
     .innerText =
-      data.mode === 'pvp'
+
+      data.mode ===
+        'pvp'
+
         ? 'PVP ARENA SQUAD'
+
         : 'MATCH SQUAD';
 
 
@@ -426,6 +491,7 @@ function renderSquadState(data) {
       'squad-capacity'
     )
     .innerText =
+
       `${data.memberCount} / ${data.maxPlayers} PLAYERS`;
 
 
@@ -436,8 +502,12 @@ function renderSquadState(data) {
   ) {
 
     renderSquadMember(
+
       index,
-      data.members[index - 1] ||
+
+      data.members[
+        index - 1
+      ] ||
       null
     );
   }
@@ -455,20 +525,30 @@ function renderSquadState(data) {
     );
 
 
-  if (slot3) {
+  if (
+    slot3
+  ) {
 
     slot3.style.display =
-      data.mode === 'pvp'
+      data.mode ===
+        'pvp'
+
         ? 'flex'
+
         : 'none';
   }
 
 
-  if (slot4) {
+  if (
+    slot4
+  ) {
 
     slot4.style.display =
-      data.mode === 'pvp'
+      data.mode ===
+        'pvp'
+
         ? 'flex'
+
         : 'none';
   }
 
@@ -479,11 +559,15 @@ function renderSquadState(data) {
     );
 
 
-  if (isSquadHost) {
+  if (
+    isSquadHost
+  ) {
 
     if (
-      data.mode === 'match' &&
-      data.memberCount !== 2
+      data.mode ===
+        'match' &&
+      data.memberCount !==
+        2
     ) {
 
       startButton.innerText =
@@ -525,7 +609,7 @@ socket.on(
 
 
 // ============================================
-// SQUAD FRIEND SIDEBAR
+// FRIEND SIDEBAR
 // ============================================
 
 async function loadSquadFriendsSidebar() {
@@ -540,6 +624,7 @@ async function loadSquadFriendsSidebar() {
     !sidebar ||
     !playerName
   ) {
+
     return;
   }
 
@@ -552,6 +637,7 @@ async function loadSquadFriendsSidebar() {
 
     const response =
       await fetch(
+
         `/api/friends/list?username=${encodeURIComponent(
           playerName
         )}`
@@ -562,10 +648,13 @@ async function loadSquadFriendsSidebar() {
       await response.json();
 
 
-    if (!friends.length) {
+    if (
+      !friends.length
+    ) {
 
       sidebar.innerHTML =
         '<p class="muted-center">No friends added yet.</p>';
+
 
       return;
     }
@@ -573,6 +662,7 @@ async function loadSquadFriendsSidebar() {
 
     const squadMembers =
       new Set(
+
         (
           currentSquad?.members ||
           []
@@ -586,92 +676,104 @@ async function loadSquadFriendsSidebar() {
 
     const full =
       currentSquad
+
         ? currentSquad.memberCount >=
           currentSquad.maxPlayers
+
         : false;
 
 
     sidebar.innerHTML =
       friends
-        .map(friend => {
+        .map(
+          friend => {
 
-          const alreadyInSquad =
-            squadMembers.has(
-              friend.username
-            );
-
-
-          const canInvite =
-            friend.isOnline &&
-            !alreadyInSquad &&
-            !full;
+            const alreadyInSquad =
+              squadMembers.has(
+                friend.username
+              );
 
 
-          return `
+            const canInvite =
 
-            <div class="squad-friend-row">
+              friend.isOnline &&
 
-              <div class="squad-friend-main">
+              !alreadyInSquad &&
 
-                <div
-                  class="round-pfp tiny-pfp"
-                >
-                  ${friendAvatarMarkup(friend)}
-                </div>
+              !full;
 
 
-                <div class="squad-friend-copy">
+            return `
 
-                  <div class="squad-friend-name">
-                    ${friend.username}
-                  </div>
+              <div class="squad-friend-row">
 
+                <div class="squad-friend-main">
 
                   <div
-                    class="
-                      squad-friend-status
-                      ${
-                        friend.isOnline
-                          ? 'online-text'
-                          : ''
-                      }
-                    "
+                    class="round-pfp tiny-pfp"
                   >
-                    ${
-                      alreadyInSquad
-                        ? 'IN SQUAD'
+                    ${friendAvatarMarkup(
+                      friend
+                    )}
+                  </div>
 
-                        : friend.isOnline
-                          ? 'ONLINE'
-                          : 'OFFLINE'
-                    }
+
+                  <div class="squad-friend-copy">
+
+                    <div class="squad-friend-name">
+                      ${friend.username}
+                    </div>
+
+
+                    <div
+                      class="
+                        squad-friend-status
+                        ${
+                          friend.isOnline
+                            ? 'online-text'
+                            : ''
+                        }
+                      "
+                    >
+
+                      ${
+                        alreadyInSquad
+                          ? 'IN SQUAD'
+
+                          : friend.isOnline
+                            ? 'ONLINE'
+
+                            : 'OFFLINE'
+                      }
+
+                    </div>
+
                   </div>
 
                 </div>
+
+
+                <button
+                  class="action-btn-sm"
+                  ${
+                    canInvite
+                      ? ''
+                      : 'disabled'
+                  }
+                  onclick="
+                    inviteFriendToSquad(
+                      '${friend.username}'
+                    )
+                  "
+                >
+                  INVITE
+                </button>
 
               </div>
 
-
-              <button
-                class="action-btn-sm"
-                ${
-                  canInvite
-                    ? ''
-                    : 'disabled'
-                }
-                onclick="
-                  inviteFriendToSquad(
-                    '${friend.username}'
-                  )
-                "
-              >
-                INVITE
-              </button>
-
-            </div>
-
-          `;
-        })
+            `;
+          }
+        )
         .join('');
 
   } catch (error) {
@@ -693,6 +795,7 @@ function inviteFriendToSquad(
   socket.emit(
     'send_squad_invite',
     {
+
       targetUsername:
         friendUsername
     }
@@ -706,7 +809,10 @@ function inviteFriendToSquad(
 
 function startCharacterSelect() {
 
-  if (!isSquadHost) {
+  if (
+    !isSquadHost
+  ) {
+
     return;
   }
 
@@ -740,8 +846,18 @@ socket.on(
       false;
 
 
+    previewCharacter =
+      null;
+
+
+    previewProfileStats =
+      null;
+
+
     matchCharacterState = {
+
       selections: {},
+
       ready: {}
     };
 
@@ -751,8 +867,12 @@ socket.on(
         'character-mode-label'
       )
       .innerText =
-        mode === 'pvp'
+
+        mode ===
+          'pvp'
+
           ? 'PVP ARENA'
+
           : 'MATCH';
 
 
@@ -761,8 +881,12 @@ socket.on(
         'ready-character-btn'
       )
       .innerText =
-        mode === 'pvp'
+
+        mode ===
+          'pvp'
+
           ? 'READY'
+
           : 'LOCK CHARACTER';
 
 
@@ -792,7 +916,10 @@ socket.on(
       );
 
 
-    if (mode === 'pvp') {
+    if (
+      mode ===
+      'pvp'
+    ) {
 
       privacyNote.innerText =
         'Character choices are hidden. Duplicate characters are allowed.';
@@ -824,6 +951,9 @@ socket.on(
     }
 
 
+    closeCharacterSelectPreview();
+
+
     renderCharacterCards();
 
 
@@ -835,7 +965,7 @@ socket.on(
 
 
 // ============================================
-// DISPLAY CHARACTER NAME
+// CHARACTER DISPLAY NAME
 // ============================================
 
 function characterDisplayName(
@@ -865,21 +995,210 @@ function characterDisplayName(
 
 
 // ============================================
-// SELECT CHARACTER
+// CHARACTER SELECT PREVIEW DATA
 // ============================================
 
-function selectCharacter(
+function characterSelectPreviewData(
   character
 ) {
 
-  if (characterReady) {
-    return;
+  /*
+    PVP INFO.
+
+    This is intentionally BRIEF.
+
+    Full details remain in the
+    Characters page.
+  */
+
+  if (
+    currentMode ===
+      'pvp'
+  ) {
+
+    if (
+      character ===
+      'cheng_xiaoshi'
+    ) {
+
+      return {
+
+        name:
+          'CHENG XIAOSHI',
+
+        role:
+          'TANK',
+
+        image:
+          '/assets/chengXiaoshi.jpg',
+
+        description:
+          '850 HP tank. Punch fights at close range, Control stuns and resets his basic attack, and Strengthen boosts his movement, damage, and attack speed.'
+      };
+    }
+
+
+    if (
+      character ===
+      'lu_guang'
+    ) {
+
+      return {
+
+        name:
+          'LU GUANG',
+
+        role:
+          'ARCHER',
+
+        image:
+          '/assets/luGuang.jpg',
+
+        description:
+          '600 HP archer. Laser automatically attacks enemies within 15 units at high projectile speed, Shield absorbs incoming damage, and Strengthen creates stronger homing Lasers.'
+      };
+    }
+  }
+
+
+  /*
+    CLASSIC MATCH.
+
+    Completely separate definitions so
+    changing PVP text never changes these.
+  */
+
+  if (
+    character ===
+    'cheng_xiaoshi'
+  ) {
+
+    return {
+
+      name:
+        'CHENG XIAOSHI',
+
+      role:
+        'COMBATER',
+
+      image:
+        '/assets/chengXiaoshi.jpg',
+
+      description:
+        'Enters photo dimensions directly. Classic Match abilities will be detailed separately.'
+    };
   }
 
 
   if (
+    character ===
+    'lu_guang'
+  ) {
+
+    return {
+
+      name:
+        'LU GUANG',
+
+      role:
+        'INFORMANT',
+
+      image:
+        '/assets/luGuang.jpg',
+
+      description:
+        'Tracks information across the photo timeline. Classic Match abilities will be detailed separately.'
+    };
+  }
+
+
+  return null;
+}
+
+
+// ============================================
+// LOAD OWN PROFICIENCY
+// ============================================
+
+async function loadPreviewProfileStats() {
+
+  if (
+    previewProfileStats
+  ) {
+
+    return previewProfileStats;
+  }
+
+
+  try {
+
+    const response =
+      await fetch(
+
+        `/api/profile/${encodeURIComponent(
+          playerName
+        )}?viewer=${encodeURIComponent(
+          playerName
+        )}`
+      );
+
+
+    const data =
+      await response.json();
+
+
+    if (
+      !response.ok
+    ) {
+
+      return {};
+    }
+
+
+    previewProfileStats =
+      data.characterStats ||
+      {};
+
+
+    return previewProfileStats;
+
+  } catch (error) {
+
+    console.error(
+      'Could not load proficiency:',
+      error
+    );
+
+
+    return {};
+  }
+}
+
+
+// ============================================
+// OPEN CHARACTER PREVIEW
+// ============================================
+
+async function openCharacterSelectPreview(
+  character
+) {
+
+  if (
+    characterReady
+  ) {
+
+    return;
+  }
+
+
+  /*
+    Classic Match still respects
+    teammate character locking.
+  */
+
+  if (
     currentMode ===
-    'match'
+      'match'
   ) {
 
     const teammate =
@@ -887,9 +1206,306 @@ function selectCharacter(
 
 
     const teammateLockedCharacter =
+
       teammate &&
+
       matchCharacterState
-        .ready[teammate]
+        .ready[
+          teammate
+        ]
+
+        ? matchCharacterState
+            .selections[
+              teammate
+            ]
+
+        : null;
+
+
+    if (
+      teammateLockedCharacter ===
+      character
+    ) {
+
+      return;
+    }
+  }
+
+
+  const info =
+    characterSelectPreviewData(
+      character
+    );
+
+
+  if (
+    !info
+  ) {
+
+    return;
+  }
+
+
+  previewCharacter =
+    character;
+
+
+  const overlay =
+    document.getElementById(
+      'character-select-preview-overlay'
+    );
+
+
+  const name =
+    document.getElementById(
+      'character-preview-name'
+    );
+
+
+  const role =
+    document.getElementById(
+      'character-preview-role'
+    );
+
+
+  const image =
+    document.getElementById(
+      'character-preview-image'
+    );
+
+
+  const description =
+    document.getElementById(
+      'character-preview-description'
+    );
+
+
+  const badgeHolder =
+    document.getElementById(
+      'character-preview-badge'
+    );
+
+
+  const rankText =
+    document.getElementById(
+      'character-preview-rank'
+    );
+
+
+  const scoreText =
+    document.getElementById(
+      'character-preview-score'
+    );
+
+
+  name.innerText =
+    info.name;
+
+
+  role.innerText =
+    `ROLE: ${info.role}`;
+
+
+  image.src =
+    info.image;
+
+
+  image.alt =
+    info.name;
+
+
+  description.innerText =
+    info.description;
+
+
+  /*
+    Profile proficiency only matters
+    for PVP right now.
+  */
+
+  if (
+    currentMode ===
+      'pvp'
+  ) {
+
+    const stats =
+      await loadPreviewProfileStats();
+
+
+    const score =
+      Number(
+
+        stats[
+          character
+        ]?.proficiencyPoints
+
+      ) ||
+      0;
+
+
+    const rank =
+      typeof getProficiencyRank ===
+        'function'
+
+        ? getProficiencyRank(
+            score
+          )
+
+        : {
+            name:
+              'BRONZE'
+          };
+
+
+    rankText.innerText =
+      rank.name;
+
+
+    scoreText.innerText =
+      `${score} PROFICIENCY`;
+
+
+    badgeHolder.innerHTML =
+      '';
+
+
+    if (
+      typeof createProficiencyIcon ===
+        'function'
+    ) {
+
+      badgeHolder.appendChild(
+
+        createProficiencyIcon(
+          score,
+          60
+        )
+      );
+    }
+
+  } else {
+
+    /*
+      No Classic proficiency system
+      yet.
+    */
+
+    rankText.innerText =
+      'CLASSIC MATCH';
+
+
+    scoreText.innerText =
+      'PROFICIENCY COMING LATER';
+
+
+    badgeHolder.innerHTML =
+      '';
+  }
+
+
+  overlay.style.display =
+    'flex';
+}
+
+
+// ============================================
+// CLOSE CHARACTER PREVIEW
+// ============================================
+
+function closeCharacterSelectPreview() {
+
+  const overlay =
+    document.getElementById(
+      'character-select-preview-overlay'
+    );
+
+
+  if (
+    overlay
+  ) {
+
+    overlay.style.display =
+      'none';
+  }
+
+
+  previewCharacter =
+    null;
+}
+
+
+// ============================================
+// SELECT FROM POPUP
+// ============================================
+
+function confirmCharacterPreviewSelection() {
+
+  if (
+    !previewCharacter ||
+    characterReady
+  ) {
+
+    return;
+  }
+
+
+  const character =
+    previewCharacter;
+
+
+  /*
+    IMPORTANT:
+
+    This ONLY selects.
+
+    It DOES NOT set characterReady.
+
+    User still needs to press the normal
+    READY / LOCK CHARACTER button.
+  */
+
+  selectCharacter(
+    character
+  );
+
+
+  closeCharacterSelectPreview();
+}
+
+
+// ============================================
+// SELECT CHARACTER
+// ============================================
+
+function selectCharacter(
+  character
+) {
+
+  if (
+    characterReady
+  ) {
+
+    return;
+  }
+
+
+  if (
+    currentMode ===
+      'match'
+  ) {
+
+    const teammate =
+      getMatchTeammateUsername();
+
+
+    const teammateLockedCharacter =
+
+      teammate &&
+
+      matchCharacterState
+        .ready[
+          teammate
+        ]
 
         ? matchCharacterState
             .selections[
@@ -924,7 +1540,7 @@ function selectCharacter(
 
 
 // ============================================
-// READY / LOCK CHARACTER
+// READY / LOCK
 // ============================================
 
 function readyCharacter() {
@@ -939,13 +1555,15 @@ function readyCharacter() {
 
 
   /*
-    In PVP we can mark our own UI ready
-    immediately because duplicate
-    characters are allowed.
+    PVP UI can show ready immediately.
+
+    This is separate from selecting
+    a character through the popup.
   */
+
   if (
     currentMode ===
-    'pvp'
+      'pvp'
   ) {
 
     characterReady =
@@ -963,12 +1581,15 @@ function readyCharacter() {
 
 
 // ============================================
-// FIND MATCH TEAMMATE
+// MATCH TEAMMATE
 // ============================================
 
 function getMatchTeammateUsername() {
 
-  if (!currentSquad) {
+  if (
+    !currentSquad
+  ) {
+
     return null;
   }
 
@@ -978,6 +1599,7 @@ function getMatchTeammateUsername() {
       .members
       .find(
         member =>
+
           member.username !==
           playerName
       );
@@ -1015,7 +1637,7 @@ function renderCharacterCards() {
 
   if (
     currentMode ===
-    'match'
+      'match'
   ) {
 
     const teammate =
@@ -1025,7 +1647,9 @@ function renderCharacterCards() {
     if (
       teammate &&
       matchCharacterState
-        .ready[teammate]
+        .ready[
+          teammate
+        ]
     ) {
 
       teammateLockedCharacter =
@@ -1038,13 +1662,28 @@ function renderCharacterCards() {
 
 
   Object
-    .entries(cards)
+    .entries(
+      cards
+    )
     .forEach(
-      ([character, card]) => {
+      ([
+        character,
+        card
+      ]) => {
+
+        if (
+          !card
+        ) {
+
+          return;
+        }
+
 
         const disabled =
+
           teammateLockedCharacter ===
             character &&
+
           selectedCharacter !==
             character;
 
@@ -1052,16 +1691,20 @@ function renderCharacterCards() {
         card
           .classList
           .toggle(
+
             'active',
+
             selectedCharacter ===
-            character
+              character
           );
 
 
         card
           .classList
           .toggle(
+
             'character-disabled',
+
             disabled
           );
 
@@ -1069,7 +1712,9 @@ function renderCharacterCards() {
         card
           .classList
           .toggle(
+
             'character-locked',
+
             characterReady &&
             selectedCharacter ===
               character
@@ -1083,6 +1728,7 @@ function renderCharacterCards() {
       'my-pick-display'
     )
     .innerText =
+
       `You: ${characterDisplayName(
         selectedCharacter
       )}${
@@ -1097,6 +1743,7 @@ function renderCharacterCards() {
       'ready-character-btn'
     )
     .disabled =
+
       !selectedCharacter ||
       characterReady;
 
@@ -1107,23 +1754,40 @@ function renderCharacterCards() {
     );
 
 
-  if (characterReady) {
+  if (
+    characterReady
+  ) {
 
     message.innerText =
-      currentMode === 'pvp'
+
+      currentMode ===
+        'pvp'
 
         ? 'Ready. Waiting for the rest of the squad...'
 
         : 'Character locked. Waiting for your teammate...';
 
+  } else if (
+    selectedCharacter
+  ) {
+
+    message.innerText =
+
+      currentMode ===
+        'pvp'
+
+        ? `${characterDisplayName(
+            selectedCharacter
+          )} selected. Press READY to confirm.`
+
+        : `${characterDisplayName(
+            selectedCharacter
+          )} selected. Press LOCK CHARACTER to confirm.`;
+
   } else {
 
     message.innerText =
-      currentMode === 'pvp'
-
-        ? 'Choose any character, then press READY.'
-
-        : 'Choose an available character, then lock it.';
+      'Click a character to view their information.';
   }
 }
 
@@ -1134,7 +1798,9 @@ function renderCharacterCards() {
 
 socket.on(
   'pvp_own_selection',
-  ({ character }) => {
+  ({
+    character
+  }) => {
 
     selectedCharacter =
       character;
@@ -1161,6 +1827,7 @@ socket.on(
         'pvp-ready-counter'
       )
       .innerText =
+
         `${readyCount} / ${memberCount} READY`;
 
 
@@ -1190,15 +1857,18 @@ socket.on(
 
 
     selectedCharacter =
+
       matchCharacterState
         .selections[
           playerName
         ] ||
+
       selectedCharacter;
 
 
     characterReady =
       Boolean(
+
         matchCharacterState
           .ready[
             playerName
@@ -1216,27 +1886,34 @@ socket.on(
       );
 
 
-    if (teammateDisplay) {
+    if (
+      teammateDisplay
+    ) {
 
       const teammateSelection =
         teammate
+
           ? matchCharacterState
               .selections[
                 teammate
               ]
+
           : null;
 
 
       const teammateReady =
         teammate
+
           ? matchCharacterState
               .ready[
                 teammate
               ]
+
           : false;
 
 
       teammateDisplay.innerText =
+
         `${
           teammate ||
           'Teammate'
@@ -1263,13 +1940,35 @@ socket.on(
 
 socket.on(
   'character_error',
-  ({ message }) => {
+  ({
+    message
+  }) => {
+
+    /*
+      If server rejects something,
+      make sure local PVP state
+      does not remain falsely locked.
+    */
+
+    if (
+      currentMode ===
+      'pvp'
+    ) {
+
+      characterReady =
+        false;
+
+
+      renderCharacterCards();
+    }
+
 
     document
       .getElementById(
         'character-select-message'
       )
       .innerText =
+
         message ||
         'Character selection error.';
   }

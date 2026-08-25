@@ -225,6 +225,24 @@ const UserSchema =
       }
     ],
 
+    showcasedCharacters: {
+      type: [String],
+    
+      default: [],
+    
+      validate: {
+        validator(value) {
+          return (
+            Array.isArray(value) &&
+            value.length <= 3
+          );
+        },
+    
+        message:
+          'You can showcase at most 3 characters.'
+      }
+    },
+
 
     // ===================================================
     // OVERALL MATCH COUNT
