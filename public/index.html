@@ -6,38 +6,24 @@
 
   <meta charset="UTF-8">
 
-
   <title>
     Link Click 2.5D Arena
   </title>
-
 
   <link
     rel="stylesheet"
     href="/css/style.css"
   >
 
-
   <script
     src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"
   ></script>
-
 
   <script
     src="/socket.io/socket.io.js"
   ></script>
 
-
-  <!--
-    Character hub styles are kept here for now so
-    you do NOT have to replace your huge style.css.
-  -->
-
   <style>
-
-    /* ===============================================
-       NEW LOBBY BACKGROUND
-    =============================================== */
 
     #lobby-screen {
 
@@ -58,10 +44,6 @@
     }
 
 
-    /* ===============================================
-       CHARACTERS BUTTON
-    =============================================== */
-
     .characters-lobby-btn {
 
       position: absolute;
@@ -72,10 +54,6 @@
       min-width: 220px;
     }
 
-
-    /* ===============================================
-       CHARACTER HUB
-    =============================================== */
 
     #character-hub-screen {
 
@@ -131,10 +109,6 @@
       letter-spacing: 1.5px;
     }
 
-
-    /* ===============================================
-       MODE TABS
-    =============================================== */
 
     .character-mode-tabs {
 
@@ -226,10 +200,6 @@
       min-height: 20px;
     }
 
-
-    /* ===============================================
-       CHARACTER GRID
-    =============================================== */
 
     #character-hub-grid {
 
@@ -471,10 +441,6 @@
     }
 
 
-    /* ===============================================
-       CLASSIC COMING SOON
-    =============================================== */
-
     .character-coming-soon {
 
       grid-column:
@@ -525,10 +491,6 @@
       letter-spacing: 2px;
     }
 
-
-    /* ===============================================
-       CHARACTER DETAIL OVERLAY
-    =============================================== */
 
     #character-detail-overlay {
 
@@ -902,9 +864,7 @@
 <body>
 
 
-  <!-- ================================================
-       LOGIN
-  ================================================= -->
+  <!-- LOGIN -->
 
   <div
     id="login-screen"
@@ -977,9 +937,7 @@
   </div>
 
 
-  <!-- ================================================
-       MAIN LOBBY
-  ================================================= -->
+  <!-- MAIN LOBBY -->
 
   <div
     id="lobby-screen"
@@ -1031,8 +989,6 @@
     </div>
 
 
-    <!-- CHARACTER HUB -->
-
     <button
       class="
         btn
@@ -1044,8 +1000,6 @@
       CHARACTERS
     </button>
 
-
-    <!-- GAME MODES -->
 
     <div class="mode-buttons">
 
@@ -1069,9 +1023,7 @@
   </div>
 
 
-  <!-- ================================================
-       CHARACTER HUB
-  ================================================= -->
+  <!-- CHARACTER HUB -->
 
   <div
     id="character-hub-screen"
@@ -1155,9 +1107,7 @@
   </div>
 
 
-  <!-- ================================================
-       CHARACTER DETAIL OVERLAY
-  ================================================= -->
+  <!-- CHARACTER DETAIL -->
 
   <div
     id="character-detail-overlay"
@@ -1189,9 +1139,7 @@
   </div>
 
 
-  <!-- ================================================
-       PROFILE
-  ================================================= -->
+  <!-- PROFILE -->
 
   <div
     id="profile-screen"
@@ -1343,8 +1291,6 @@
       </div>
 
 
-      <!-- SHOWCASE CHARACTER PICKER -->
-
       <div
         id="showcase-picker"
         class="showcase-picker"
@@ -1405,9 +1351,7 @@
   </div>
 
 
-  <!-- ================================================
-       FRIENDS
-  ================================================= -->
+  <!-- FRIENDS -->
 
   <div
     id="friends-screen"
@@ -1565,9 +1509,7 @@
   </div>
 
 
-  <!-- ================================================
-       SQUAD LOBBY
-  ================================================= -->
+  <!-- SQUAD LOBBY -->
 
   <div
     id="team-screen"
@@ -1608,8 +1550,6 @@
       "
     >
 
-      <!-- SLOT 1 -->
-
       <div
         class="team-slot"
         id="team-slot-1"
@@ -1634,8 +1574,6 @@
 
       </div>
 
-
-      <!-- SLOT 2 -->
 
       <div
         class="team-slot"
@@ -1666,8 +1604,6 @@
       </div>
 
 
-      <!-- SLOT 3 -->
-
       <div
         class="team-slot"
         id="team-slot-3"
@@ -1696,8 +1632,6 @@
 
       </div>
 
-
-      <!-- SLOT 4 -->
 
       <div
         class="team-slot"
@@ -1774,9 +1708,7 @@
   </div>
 
 
-  <!-- ================================================
-       CHARACTER SELECT
-  ================================================= -->
+  <!-- CHARACTER SELECT -->
 
   <div
     id="char-screen"
@@ -1860,18 +1792,12 @@
     ></div>
 
 
-    <!-- ==========================================
-         CHARACTER PHOTO GRID
-    =========================================== -->
-
     <div
       class="
         char-container
         character-photo-grid
       "
     >
-
-      <!-- CHENG XIAOSHI -->
 
       <button
         class="character-photo-card"
@@ -1892,8 +1818,6 @@
       </button>
 
 
-      <!-- LU GUANG -->
-
       <button
         class="character-photo-card"
         id="card-lu"
@@ -1912,6 +1836,25 @@
 
       </button>
 
+
+      <button
+        class="character-photo-card"
+        id="card-qiao"
+        type="button"
+        onclick="
+          openCharacterSelectPreview(
+            'qiao_ling'
+          )
+        "
+      >
+
+        <img
+          src="/assets/qiaoLing.jpg"
+          alt="Qiao Ling"
+        >
+
+      </button>
+
     </div>
 
 
@@ -1922,8 +1865,6 @@
       Click a character to view their information.
     </div>
 
-
-    <!-- EXISTING READY / LOCK BUTTON -->
 
     <button
       class="
@@ -1940,10 +1881,6 @@
     </button>
 
 
-    <!-- ==========================================
-         CHARACTER SELECTION PREVIEW
-    =========================================== -->
-
     <div
       id="character-select-preview-overlay"
       class="character-select-preview-overlay"
@@ -1951,8 +1888,6 @@
     >
 
       <div class="character-select-preview-panel">
-
-        <!-- TOP -->
 
         <div class="character-select-preview-top">
 
@@ -1989,12 +1924,7 @@
         </div>
 
 
-        <!-- BODY -->
-
         <div class="character-preview-body">
-
-
-          <!-- CHARACTER IMAGE -->
 
           <div class="character-preview-art-wrap">
 
@@ -2008,12 +1938,7 @@
           </div>
 
 
-          <!-- CHARACTER INFO -->
-
           <div class="character-preview-info">
-
-
-            <!-- PROFICIENCY -->
 
             <div class="character-preview-proficiency">
 
@@ -2045,8 +1970,6 @@
             </div>
 
 
-            <!-- SHORT DESCRIPTION -->
-
             <p
               id="character-preview-description"
               class="character-preview-description"
@@ -2056,8 +1979,6 @@
 
         </div>
 
-
-        <!-- ACTIONS -->
 
         <div class="character-preview-actions">
 
@@ -2098,9 +2019,7 @@
   </div>
 
 
-  <!-- ================================================
-       ARENA HUD
-  ================================================= -->
+  <!-- ARENA HUD -->
 
   <div
     id="ui-layer"
@@ -2117,7 +2036,6 @@
       <div class="combat-health-row">
 
         HP
-
 
         <strong id="combat-hp">
           850 / 850
@@ -2137,8 +2055,6 @@
     <div class="combat-controls-hud">
 
       <div class="ability-list">
-
-        <!-- SPACE -->
 
         <div class="ability-row">
 
@@ -2171,8 +2087,6 @@
         </div>
 
 
-        <!-- Q -->
-
         <div class="ability-row">
 
           <div class="ability-key">
@@ -2203,8 +2117,6 @@
 
         </div>
 
-
-        <!-- E -->
 
         <div class="ability-row">
 
@@ -2298,10 +2210,6 @@
     id="game-canvas"
   ></canvas>
 
-
-  <!-- ================================================
-       SCRIPT ORDER
-  ================================================= -->
 
   <script
     src="/js/app.js"

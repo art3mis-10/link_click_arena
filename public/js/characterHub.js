@@ -18,12 +18,10 @@ const CHARACTER_HUB_DATA = {
       image:
         '/assets/chengXiaoshi.jpg',
   
-  
       pvp: {
   
         hp:
           850,
-  
   
         basic: {
   
@@ -34,9 +32,8 @@ const CHARACTER_HUB_DATA = {
             'PUNCH',
   
           description:
-            'Deals 80 damage to the nearest opponent within 4 world units in Cheng Xiaoshi’s front 180° area. Can be used once per second.'
+            'Deals 80 damage in Cheng Xiaoshi’s front 180° area within 4 world units. Normally attacks once per second. During Strengthen it deals 100 damage and attacks twice per second.'
         },
-  
   
         ability: {
   
@@ -47,9 +44,8 @@ const CHARACTER_HUB_DATA = {
             'CONTROL',
   
           description:
-            'Launches a flying punch up to 12 world units away for 50 damage. On hit, the target is stunned for 3 seconds and Cheng Xiaoshi gains +50% movement speed for 3 seconds. Casting Control always resets Punch immediately, even if Control misses. Cooldown: 10 seconds.'
+            'Throws a flying punch up to 12 world units for 50 damage. A successful hit stuns for 3 seconds and gives Cheng +50% movement speed for 3 seconds. Casting Control immediately resets Punch even if it misses. Cooldown: 10 seconds.'
         },
-  
   
         ultimate: {
   
@@ -60,7 +56,7 @@ const CHARACTER_HUB_DATA = {
             'STRENGTHEN',
   
           description:
-            'Lasts 5 seconds. Cheng Xiaoshi gains +15% movement speed, Punch damage increases to 100, and Punch attack rate increases to 2 attacks per second. Cooldown: 40 seconds.'
+            'For 5 seconds, Cheng gains +15% movement speed, Punch increases to 100 damage, and Punch can attack twice per second. Cooldown: 40 seconds.'
         }
       }
     },
@@ -80,12 +76,10 @@ const CHARACTER_HUB_DATA = {
       image:
         '/assets/luGuang.jpg',
   
-  
       pvp: {
   
         hp:
           600,
-  
   
         basic: {
   
@@ -96,9 +90,8 @@ const CHARACTER_HUB_DATA = {
             'LASER',
   
           description:
-            'Automatically targets the closest living opponent within 15 world units. Deals 25 damage and fires up to 4 times per second. Lasers travel at 80 world units per second and can technically be dodged. Laser cannot be used when no opponent is within range.'
+            'Automatically fires at the closest living opponent within 15 world units. Deals 25 damage, fires four times per second, and travels at 80 world units per second. Normal Lasers do not home after being fired.'
         },
-  
   
         ability: {
   
@@ -109,9 +102,8 @@ const CHARACTER_HUB_DATA = {
             'SHIELD',
   
           description:
-            'Creates an 80 HP shield for 3 seconds. Incoming damage is absorbed by the shield before Lu Guang’s health. Excess damage carries through after the shield breaks. Cooldown: 12 seconds.'
+            'Creates an 80 HP shield for 3 seconds. Damage is absorbed by the shield first, with excess damage carrying through to Lu Guang. Cooldown: 12 seconds.'
         },
-  
   
         ultimate: {
   
@@ -122,7 +114,64 @@ const CHARACTER_HUB_DATA = {
             'STRENGTHEN',
   
           description:
-            'Lasts 5 seconds. Lu Guang gains +20% movement speed. Laser damage increases to 30 and lasers become homing projectiles that track their selected opponent until they hit. Each strengthened laser has a 33% chance to stun its target for 0.5 seconds. Cooldown: 35 seconds.'
+            'For 5 seconds, Lu Guang gains +20% movement speed. Lasers deal 30 damage and become homing attacks. Each strengthened Laser independently has a 33% chance to stun for 0.5 seconds. Cooldown: 35 seconds.'
+        }
+      }
+    },
+  
+  
+    qiao_ling: {
+  
+      id:
+        'qiao_ling',
+  
+      name:
+        'QIAO LING',
+  
+      role:
+        'ASSASSIN',
+  
+      image:
+        '/assets/qiaoLing.jpg',
+  
+      pvp: {
+        hp:
+            550,
+        
+        basic: {
+        
+            key:
+            'SPACE',
+        
+            name:
+            'BOXING',
+        
+            description:
+            'One press performs two consecutive melee attacks within 4 units: a 30-damage fist followed shortly after by a 50-damage leg sweep. The sweep checks separately, so a fast or temporarily invulnerable opponent can avoid the second hit.'
+        },
+        
+        ability: {
+        
+            key:
+            'Q',
+        
+            name:
+            'MOBILITY',
+        
+            description:
+            'Qiao Ling bursts at 70 world units per second for 0.25 seconds. She can freely change direction using normal movement controls during the burst. Cooldown: 5 seconds.'
+        },
+        
+        ultimate: {
+        
+            key:
+            'E',
+        
+            name:
+            'DAMAGE',
+        
+            description:
+            'Qiao Ling rises 5.5 world units into the air for 1 second and can move normally while airborne. Non-tracking attacks cannot hit her. A filled red 5-unit-radius impact circle follows her position. She then crashes down for 350 AOE damage and a 1-second AOE stun. Cooldown: 25 seconds.'
         }
       }
     }
@@ -130,7 +179,7 @@ const CHARACTER_HUB_DATA = {
   
   
   // =====================================================
-  // CURRENT CHARACTER HUB STATE
+  // STATE
   // =====================================================
   
   let characterHubMode =
@@ -142,7 +191,7 @@ const CHARACTER_HUB_DATA = {
   
   
   // =====================================================
-  // PROFICIENCY
+  // PROFICIENCY RANK
   // =====================================================
   
   function getProficiencyRank(
@@ -156,17 +205,6 @@ const CHARACTER_HUB_DATA = {
         0
       );
   
-  
-    /*
-      Boundaries are non-overlapping:
-  
-      Bronze    0–9
-      Silver    10–29
-      Gold      30–49
-      Platinum  50–99
-      Sapphire  100–199
-      Diamond   200+
-    */
   
     if (
       value <
@@ -278,7 +316,7 @@ const CHARACTER_HUB_DATA = {
   
   
   // =====================================================
-  // LOAD USER CHARACTER STATS
+  // LOAD STATS
   // =====================================================
   
   async function loadCharacterHubStats() {
@@ -289,6 +327,8 @@ const CHARACTER_HUB_DATA = {
         await fetch(
   
           `/api/profile/${encodeURIComponent(
+            playerName
+          )}?viewer=${encodeURIComponent(
             playerName
           )}`
         );
@@ -302,8 +342,15 @@ const CHARACTER_HUB_DATA = {
         !response.ok
       ) {
   
+        console.error(
+          'Character stats request failed:',
+          data
+        );
+  
+  
         characterHubStats =
           {};
+  
   
         return;
       }
@@ -312,6 +359,7 @@ const CHARACTER_HUB_DATA = {
       characterHubStats =
         data.characterStats ||
         {};
+  
   
     } catch (error) {
   
@@ -374,7 +422,7 @@ const CHARACTER_HUB_DATA = {
   
   
   // =====================================================
-  // RENDER GENERAL CHARACTER PAGE
+  // RENDER HUB
   // =====================================================
   
   function renderCharacterHub() {
@@ -393,22 +441,26 @@ const CHARACTER_HUB_DATA = {
   
     if (
       characterHubMode ===
-      'classic'
+        'classic'
     ) {
   
       notice.innerText =
         'CLASSIC MATCH character information will be added later.';
   
   
-      grid.innerHTML =
-        `
-          <div class="character-coming-soon">
-            CLASSIC MATCH
-            <span>
-              CHARACTER KITS COMING SOON
-            </span>
-          </div>
-        `;
+      grid.innerHTML = `
+  
+        <div class="character-coming-soon">
+  
+          CLASSIC MATCH
+  
+          <span>
+            CHARACTER KITS COMING SOON
+          </span>
+  
+        </div>
+  
+      `;
   
   
       return;
@@ -416,7 +468,7 @@ const CHARACTER_HUB_DATA = {
   
   
     notice.innerText =
-      'PVP ARENA • proficiency is based on your results with each character.';
+      'PVP ARENA • wins award 2 proficiency points; other completed matches award 1.';
   
   
     grid.innerHTML =
@@ -439,24 +491,21 @@ const CHARACTER_HUB_DATA = {
   
           const proficiency =
             Number(
-              stats
-                .proficiencyPoints
+              stats.proficiencyPoints
             ) ||
             0;
   
   
           const actualMatches =
             Number(
-              stats
-                .pvpMatches
+              stats.pvpMatches
             ) ||
             0;
   
   
           const wins =
             Number(
-              stats
-                .pvpWins
+              stats.pvpWins
             ) ||
             0;
   
@@ -541,6 +590,7 @@ const CHARACTER_HUB_DATA = {
               </div>
   
             </div>
+  
           `;
   
   
@@ -568,7 +618,7 @@ const CHARACTER_HUB_DATA = {
   
   
   // =====================================================
-  // CHARACTER DETAIL
+  // OPEN DETAIL
   // =====================================================
   
   function openCharacterDetail(
@@ -577,7 +627,7 @@ const CHARACTER_HUB_DATA = {
   
     if (
       characterHubMode !==
-      'pvp'
+        'pvp'
     ) {
   
       return;
@@ -723,6 +773,7 @@ const CHARACTER_HUB_DATA = {
       ${abilityDetailMarkup(
         character.pvp.ultimate
       )}
+  
     `;
   
   
@@ -747,7 +798,7 @@ const CHARACTER_HUB_DATA = {
   
   
   // =====================================================
-  // ABILITY DETAIL MARKUP
+  // ABILITY MARKUP
   // =====================================================
   
   function abilityDetailMarkup(
@@ -777,6 +828,7 @@ const CHARACTER_HUB_DATA = {
         </div>
   
       </div>
+  
     `;
   }
   
@@ -797,7 +849,7 @@ const CHARACTER_HUB_DATA = {
   
   
   // =====================================================
-  // PIXEL PROFICIENCY ICON
+  // PIXEL BADGE
   // =====================================================
   
   function createProficiencyIcon(
@@ -817,21 +869,9 @@ const CHARACTER_HUB_DATA = {
       );
   
   
-    /*
-      Internal resolution deliberately tiny
-      for real pixel-art rendering.
-    */
-  
     canvas.width =
       24;
   
-  
-    canvas.height =
-      24;
-  
-  
-    canvas.width =
-      24;
   
     canvas.height =
       24;
@@ -878,7 +918,7 @@ const CHARACTER_HUB_DATA = {
   
   
   // =====================================================
-  // PIXEL DRAWING HELPER
+  // PIXEL HELPER
   // =====================================================
   
   function px(
@@ -915,33 +955,20 @@ const CHARACTER_HUB_DATA = {
   ) {
   
     px(ctx, 6, 5, 12, 2, outer);
-  
     px(ctx, 5, 7, 14, 5, outer);
-  
     px(ctx, 6, 12, 12, 3, outer);
-  
     px(ctx, 7, 15, 10, 2, outer);
-  
     px(ctx, 8, 17, 8, 2, outer);
-  
     px(ctx, 9, 19, 6, 1, outer);
-  
     px(ctx, 10, 20, 4, 1, outer);
-  
     px(ctx, 11, 21, 2, 1, outer);
   
-  
     px(ctx, 7, 7, 10, 5, inner);
-  
     px(ctx, 8, 12, 8, 3, inner);
-  
     px(ctx, 9, 15, 6, 2, inner);
-  
     px(ctx, 10, 17, 4, 2, inner);
   
-  
     px(ctx, 8, 8, 2, 5, shine);
-  
     px(ctx, 10, 7, 4, 1, shine);
   }
   
@@ -965,7 +992,7 @@ const CHARACTER_HUB_DATA = {
   
     if (
       rank ===
-      'bronze'
+        'bronze'
     ) {
   
       drawShield(
@@ -992,15 +1019,12 @@ const CHARACTER_HUB_DATA = {
   
     if (
       rank ===
-      'silver'
+        'silver'
     ) {
   
       px(ctx, 3, 9, 2, 6, '#68717d');
-  
       px(ctx, 19, 9, 2, 6, '#68717d');
-  
       px(ctx, 2, 10, 1, 4, '#d7dde3');
-  
       px(ctx, 21, 10, 1, 4, '#d7dde3');
   
   
@@ -1028,15 +1052,12 @@ const CHARACTER_HUB_DATA = {
   
     if (
       rank ===
-      'gold'
+        'gold'
     ) {
   
       px(ctx, 7, 3, 2, 3, '#a86c0b');
-  
       px(ctx, 11, 2, 2, 4, '#ffe267');
-  
       px(ctx, 15, 3, 2, 3, '#a86c0b');
-  
       px(ctx, 8, 5, 8, 2, '#df9e15');
   
   
@@ -1049,7 +1070,6 @@ const CHARACTER_HUB_DATA = {
   
   
       px(ctx, 11, 10, 2, 7, '#fff3a8');
-  
       px(ctx, 9, 12, 6, 2, '#fff3a8');
   
   
@@ -1059,20 +1079,15 @@ const CHARACTER_HUB_DATA = {
   
     if (
       rank ===
-      'platinum'
+        'platinum'
     ) {
   
       px(ctx, 2, 8, 3, 2, '#6d818b');
-  
       px(ctx, 1, 10, 4, 2, '#bad2d9');
-  
       px(ctx, 2, 12, 3, 2, '#6d818b');
   
-  
       px(ctx, 19, 8, 3, 2, '#6d818b');
-  
       px(ctx, 19, 10, 4, 2, '#bad2d9');
-  
       px(ctx, 19, 12, 3, 2, '#6d818b');
   
   
@@ -1085,9 +1100,7 @@ const CHARACTER_HUB_DATA = {
   
   
       px(ctx, 11, 9, 2, 2, '#ffffff');
-  
       px(ctx, 10, 11, 4, 4, '#dafaff');
-  
       px(ctx, 11, 15, 2, 2, '#ffffff');
   
   
@@ -1097,28 +1110,17 @@ const CHARACTER_HUB_DATA = {
   
     if (
       rank ===
-      'sapphire'
+        'sapphire'
     ) {
   
-      /*
-        Blue crystal wings.
-      */
-  
       px(ctx, 1, 7, 4, 2, '#174988');
-  
       px(ctx, 2, 5, 4, 2, '#2879ce');
-  
       px(ctx, 3, 3, 4, 2, '#69baff');
-  
       px(ctx, 1, 9, 5, 2, '#1d61ae');
   
-  
       px(ctx, 19, 7, 4, 2, '#174988');
-  
       px(ctx, 18, 5, 4, 2, '#2879ce');
-  
       px(ctx, 17, 3, 4, 2, '#69baff');
-  
       px(ctx, 18, 9, 5, 2, '#1d61ae');
   
   
@@ -1131,11 +1133,8 @@ const CHARACTER_HUB_DATA = {
   
   
       px(ctx, 10, 9, 4, 2, '#b8edff');
-  
       px(ctx, 9, 11, 6, 4, '#238fff');
-  
       px(ctx, 10, 15, 4, 2, '#074ba5');
-  
       px(ctx, 11, 10, 2, 2, '#ffffff');
   
   
@@ -1143,38 +1142,21 @@ const CHARACTER_HUB_DATA = {
     }
   
   
-    /*
-      DIAMOND
-    */
+    // DIAMOND
   
     px(ctx, 0, 7, 5, 2, '#5dd8ff');
-  
     px(ctx, 1, 5, 5, 2, '#a4efff');
-  
     px(ctx, 2, 3, 5, 2, '#e6fcff');
-  
     px(ctx, 0, 9, 6, 2, '#35b9e8');
   
-  
     px(ctx, 19, 7, 5, 2, '#5dd8ff');
-  
     px(ctx, 18, 5, 5, 2, '#a4efff');
-  
     px(ctx, 17, 3, 5, 2, '#e6fcff');
-  
     px(ctx, 18, 9, 6, 2, '#35b9e8');
   
-  
-    /*
-      Crown.
-    */
-  
     px(ctx, 7, 2, 2, 3, '#9ceeff');
-  
     px(ctx, 11, 0, 2, 5, '#ffffff');
-  
     px(ctx, 15, 2, 2, 3, '#9ceeff');
-  
     px(ctx, 7, 4, 10, 2, '#50cff8');
   
   
@@ -1186,30 +1168,14 @@ const CHARACTER_HUB_DATA = {
     );
   
   
-    /*
-      Large diamond.
-    */
-  
     px(ctx, 10, 8, 4, 2, '#ffffff');
-  
     px(ctx, 8, 10, 8, 4, '#baf5ff');
-  
     px(ctx, 9, 14, 6, 3, '#59d6ff');
-  
     px(ctx, 10, 17, 4, 2, '#2397c3');
-  
     px(ctx, 11, 19, 2, 1, '#186f91');
   
-  
-    /*
-      Small glints.
-    */
-  
     px(ctx, 3, 1, 1, 3, '#ffffff');
-  
     px(ctx, 2, 2, 3, 1, '#ffffff');
-  
     px(ctx, 20, 14, 1, 3, '#ffffff');
-  
     px(ctx, 19, 15, 3, 1, '#ffffff');
   }

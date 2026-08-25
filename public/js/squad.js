@@ -974,7 +974,7 @@ function characterDisplayName(
 
   if (
     character ===
-    'cheng_xiaoshi'
+      'cheng_xiaoshi'
   ) {
 
     return 'Cheng Xiaoshi';
@@ -983,10 +983,19 @@ function characterDisplayName(
 
   if (
     character ===
-    'lu_guang'
+      'lu_guang'
   ) {
 
     return 'Lu Guang';
+  }
+
+
+  if (
+    character ===
+      'qiao_ling'
+  ) {
+
+    return 'Qiao Ling';
   }
 
 
@@ -1002,15 +1011,6 @@ function characterSelectPreviewData(
   character
 ) {
 
-  /*
-    PVP INFO.
-
-    This is intentionally BRIEF.
-
-    Full details remain in the
-    Characters page.
-  */
-
   if (
     currentMode ===
       'pvp'
@@ -1018,7 +1018,7 @@ function characterSelectPreviewData(
 
     if (
       character ===
-      'cheng_xiaoshi'
+        'cheng_xiaoshi'
     ) {
 
       return {
@@ -1040,7 +1040,7 @@ function characterSelectPreviewData(
 
     if (
       character ===
-      'lu_guang'
+        'lu_guang'
     ) {
 
       return {
@@ -1058,19 +1058,38 @@ function characterSelectPreviewData(
           '600 HP archer. Laser automatically attacks enemies within 15 units at high projectile speed, Shield absorbs incoming damage, and Strengthen creates stronger homing Lasers.'
       };
     }
+
+
+    if (
+      character ===
+        'qiao_ling'
+    ) {
+
+      return {
+
+        name:
+          'QIAO LING',
+
+        role:
+          'ASSASSIN',
+
+        image:
+          '/assets/qiaoLing.jpg',
+
+        description:
+          '550 HP assassin with high agility. Boxing chains a fist into a leg sweep, Mobility gives her a short high-speed burst, and Damage launches her airborne before a massive AOE axe kick.'
+      };
+    }
   }
 
 
-  /*
-    CLASSIC MATCH.
-
-    Completely separate definitions so
-    changing PVP text never changes these.
-  */
+  // ============================================
+  // CLASSIC MATCH — KEPT SEPARATE
+  // ============================================
 
   if (
     character ===
-    'cheng_xiaoshi'
+      'cheng_xiaoshi'
   ) {
 
     return {
@@ -1092,7 +1111,7 @@ function characterSelectPreviewData(
 
   if (
     character ===
-    'lu_guang'
+      'lu_guang'
   ) {
 
     return {
@@ -1108,6 +1127,28 @@ function characterSelectPreviewData(
 
       description:
         'Tracks information across the photo timeline. Classic Match abilities will be detailed separately.'
+    };
+  }
+
+
+  if (
+    character ===
+      'qiao_ling'
+  ) {
+
+    return {
+
+      name:
+        'QIAO LING',
+
+      role:
+        'CLASSIC ROLE TBD',
+
+      image:
+        '/assets/qiaoLing.jpg',
+
+      description:
+        'Classic Match information will be added separately.'
     };
   }
 
@@ -1191,11 +1232,6 @@ async function openCharacterSelectPreview(
   }
 
 
-  /*
-    Classic Match still respects
-    teammate character locking.
-  */
-
   if (
     currentMode ===
       'match'
@@ -1224,7 +1260,7 @@ async function openCharacterSelectPreview(
 
     if (
       teammateLockedCharacter ===
-      character
+        character
     ) {
 
       return;
@@ -1318,11 +1354,6 @@ async function openCharacterSelectPreview(
     info.description;
 
 
-  /*
-    Profile proficiency only matters
-    for PVP right now.
-  */
-
   if (
     currentMode ===
       'pvp'
@@ -1384,11 +1415,6 @@ async function openCharacterSelectPreview(
     }
 
   } else {
-
-    /*
-      No Classic proficiency system
-      yet.
-    */
 
     rankText.innerText =
       'CLASSIC MATCH';
@@ -1453,17 +1479,6 @@ function confirmCharacterPreviewSelection() {
     previewCharacter;
 
 
-  /*
-    IMPORTANT:
-
-    This ONLY selects.
-
-    It DOES NOT set characterReady.
-
-    User still needs to press the normal
-    READY / LOCK CHARACTER button.
-  */
-
   selectCharacter(
     character
   );
@@ -1517,7 +1532,7 @@ function selectCharacter(
 
     if (
       teammateLockedCharacter ===
-      character
+        character
     ) {
 
       return;
@@ -1553,13 +1568,6 @@ function readyCharacter() {
     return;
   }
 
-
-  /*
-    PVP UI can show ready immediately.
-
-    This is separate from selecting
-    a character through the popup.
-  */
 
   if (
     currentMode ===
@@ -1627,6 +1635,11 @@ function renderCharacterCards() {
     lu_guang:
       document.getElementById(
         'card-lu'
+      ),
+
+    qiao_ling:
+      document.getElementById(
+        'card-qiao'
       )
   };
 
@@ -1944,15 +1957,9 @@ socket.on(
     message
   }) => {
 
-    /*
-      If server rejects something,
-      make sure local PVP state
-      does not remain falsely locked.
-    */
-
     if (
       currentMode ===
-      'pvp'
+        'pvp'
     ) {
 
       characterReady =

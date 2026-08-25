@@ -464,11 +464,6 @@ async function openProfileScreen(
       data.isFriend
     ) {
 
-      /*
-        NO ADD FRIEND BUTTON
-        for existing friends.
-      */
-
       actionBox.innerHTML = `
 
         <div class="profile-friend-confirmed">
@@ -528,6 +523,7 @@ async function openProfileScreen(
   }
 }
 
+
 let editingShowcase =
   [];
 
@@ -551,6 +547,15 @@ function characterProfileImage(
   ) {
 
     return '/assets/luGuang.jpg';
+  }
+
+
+  if (
+    character ===
+      'qiao_ling'
+  ) {
+
+    return '/assets/qiaoLing.jpg';
   }
 
 
@@ -613,10 +618,6 @@ function renderProfileShowcase(
   holder.innerHTML =
     '';
 
-
-  /*
-    Always render exactly 3 slots.
-  */
 
   for (
     let index = 0;
@@ -707,10 +708,6 @@ function renderProfileShowcase(
   }
 
 
-  /*
-    Only profile owner may edit.
-  */
-
   if (
     !isOwnProfile
   ) {
@@ -741,6 +738,7 @@ function renderProfileShowcase(
 
   `;
 }
+
 
 function openShowcaseEditor() {
 
@@ -793,6 +791,14 @@ function renderShowcasePicker() {
 
       image:
         '/assets/luGuang.jpg'
+    },
+
+    {
+      id:
+        'qiao_ling',
+
+      image:
+        '/assets/qiaoLing.jpg'
     }
   ];
 
@@ -867,11 +873,6 @@ function toggleShowcaseCharacter(
     );
 
 
-  /*
-    Clicking an already selected
-    character DESELECTS it.
-  */
-
   if (
     existingIndex !==
     -1
@@ -889,10 +890,6 @@ function toggleShowcaseCharacter(
     return;
   }
 
-
-  /*
-    Maximum 3.
-  */
 
   if (
     editingShowcase.length >=
@@ -959,11 +956,6 @@ async function saveCharacterShowcase() {
 
     closeShowcaseEditor();
 
-
-    /*
-      Reload own profile so badges/slots
-      immediately refresh.
-    */
 
     openProfileScreen();
 

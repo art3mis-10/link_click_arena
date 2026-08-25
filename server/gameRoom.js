@@ -1,7 +1,5 @@
 class GameManager {
-
   constructor() {
-
     this.players = {};
   }
 
@@ -11,9 +9,7 @@ class GameManager {
     name,
     avatar = ''
   ) {
-
     this.players[id] = {
-
       id,
 
       name:
@@ -43,13 +39,11 @@ class GameManager {
         null
     };
 
-
     return this.players[id];
   }
 
 
   getPlayer(id) {
-
     return (
       this.players[id] ||
       null
@@ -58,7 +52,6 @@ class GameManager {
 
 
   removePlayer(id) {
-
     delete this.players[id];
   }
 
@@ -67,38 +60,30 @@ class GameManager {
     id,
     data
   ) {
-
     const player =
       this.players[id];
 
-
     if (!player) {
-
       return null;
     }
-
 
     if (
       Number.isFinite(
         Number(data.x)
       )
     ) {
-
       player.x =
         Number(data.x);
     }
-
 
     if (
       Number.isFinite(
         Number(data.z)
       )
     ) {
-
       player.z =
         Number(data.z);
     }
-
 
     if (
       Number.isFinite(
@@ -107,14 +92,12 @@ class GameManager {
         )
       )
     ) {
-
       player.rotation =
         Number(
           data.rotation
         );
     }
 
-
     if (
       Number.isFinite(
         Number(
@@ -122,13 +105,11 @@ class GameManager {
         )
       )
     ) {
-
       player.pitch =
         Number(
           data.pitch
         );
     }
-
 
     return player;
   }
@@ -138,11 +119,9 @@ class GameManager {
     id,
     character
   ) {
-
     if (
       this.players[id]
     ) {
-
       this.players[id]
         .character =
           character;
@@ -156,27 +135,21 @@ class GameManager {
     z,
     rotation = 0
   ) {
-
     if (
       !this.players[id]
     ) {
-
       return;
     }
-
 
     this.players[id].x =
       x;
 
-
     this.players[id].z =
       z;
-
 
     this.players[id]
       .rotation =
         rotation;
-
 
     this.players[id]
       .pitch =
@@ -188,105 +161,91 @@ class GameManager {
     id,
     maxHp
   ) {
-  
     const player =
       this.players[id];
-  
-  
+
     if (!player) {
-  
       return null;
     }
-  
-  
+
     const now =
       Date.now();
-  
-  
+
     player.combat = {
-  
       maxHp,
-  
+
       hp:
         maxHp,
-  
+
       alive:
         true,
-  
-  
-      // -----------------------------
+
       // DAMAGE / REGEN
-      // -----------------------------
-  
       lastDamageAt:
         0,
-  
+
       nextRegenAt:
-        now +
-        10000,
-  
-  
-      // -----------------------------
+        now + 10000,
+
       // STATUS
-      // -----------------------------
-  
       stunnedUntil:
         0,
-  
-  
-      // -----------------------------
-      // CHENG SPEED BUFF
-      // -----------------------------
-  
+
+      /*
+        Universal movement stop while
+        a basic attack is executing.
+      */
+      attackLockedUntil:
+        0,
+
+      /*
+        Used by Qiao DAMAGE so abilities
+        cannot be used while airborne,
+        while movement is still allowed.
+      */
+      actionLockedUntil:
+        0,
+
+      // CHENG
       speedBuffUntil:
         0,
-  
-  
-      // -----------------------------
-      // ULT
-      // -----------------------------
-  
+
+      // QIAO
+      mobilityUntil:
+        0,
+
+      airborneUntil:
+        0,
+
+      // ULT / GENERAL
       strengthenUntil:
         0,
-  
-  
-      // -----------------------------
+
       // COOLDOWNS
-      // -----------------------------
-  
       basicReadyAt:
         0,
-  
+
       controlReadyAt:
         0,
-  
+
       strengthenReadyAt:
         0,
-  
-  
-      // -----------------------------
-      // LU GUANG SHIELD
-      // -----------------------------
-  
+
+      // LU SHIELD
       shieldHp:
         0,
-  
+
       shieldMaxHp:
         0,
-  
+
       shieldUntil:
         0,
-  
-  
-      // -----------------------------
+
       // MOVEMENT VALIDATION
-      // -----------------------------
-  
       lastMoveAt:
         now
     };
-  
-  
+
     return player.combat;
   }
 }

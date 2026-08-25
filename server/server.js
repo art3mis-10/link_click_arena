@@ -2,6 +2,10 @@ const path =
   require('path');
 
 
+const crypto =
+  require('crypto');
+
+
 require('dotenv').config({
 
   path:
@@ -32,7 +36,7 @@ const GameManager =
   require('./gameRoom');
 
 
-const CombatManager = 
+const CombatManager =
   require('./combatManager');
 
 
@@ -42,7 +46,9 @@ const app =
 
 const http =
   require('http')
-    .createServer(app);
+    .createServer(
+      app
+    );
 
 
 const io =
@@ -55,31 +61,25 @@ const gameManager =
   new GameManager();
 
 
-// ============================================
+// =====================================================
 // LIVE STATE
-// ============================================
+// =====================================================
 
 const onlineUsers =
   new Map();
 
 
-/*
-  host username
-  ->
-  squad object
-*/
 const activeSquads =
   new Map();
 
 
-/*
-  username
-  ->
-  host username
-*/
 const userSquadHosts =
   new Map();
 
+
+// =====================================================
+// EXPRESS
+// =====================================================
 
 app.use(
 
@@ -103,17 +103,8 @@ app.use(
 );
 
 
-// ============================================
-// STATIC FILES
-// ============================================
-
 /*
-  Serve the public folder.
-
-  __dirname is the server folder,
-  so ../public points to:
-
-  project/public/
+  PUBLIC FILES
 */
 
 app.use(
@@ -129,15 +120,7 @@ app.use(
 
 
 /*
-  Serve the separate assets folder.
-
-  This makes:
-
-  project/assets/lobby_background.jpg
-
-  available in the browser as:
-
-  /assets/lobby_background.jpg
+  ROOT ASSETS FOLDER
 */
 
 app.use(
@@ -154,9 +137,9 @@ app.use(
 );
 
 
-// ============================================
-// MONGODB
-// ============================================
+// =====================================================
+// DATABASE
+// =====================================================
 
 mongoose
   .connect(
@@ -181,9 +164,9 @@ mongoose
   );
 
 
-// ============================================
-// SQUAD HELPERS
-// ============================================
+// =====================================================
+// SQUADS
+// =====================================================
 
 function makeSoloSquad(
   username,
@@ -208,7 +191,20 @@ function makeSoloSquad(
       {},
 
     ready:
-      {}
+      {},
+
+    /*
+      Snapshot of who actually
+      STARTED this round.
+    */
+    roundRoster:
+      [],
+
+    /*
+      Stops accidental double-awards.
+    */
+    roundStatsRecorded:
+      false
   };
 
 
@@ -238,7 +234,9 @@ function getSquadForUser(
     );
 
 
-  if (!hostUsername) {
+  if (
+    !hostUsername
+  ) {
 
     return null;
   }
@@ -265,8 +263,11 @@ function maxPlayersForMode(
   mode
 ) {
 
-  return mode === 'pvp'
+  return mode ===
+    'pvp'
+
     ? 4
+
     : 2;
 }
 
@@ -276,11 +277,15 @@ function validCharacter(
 ) {
 
   return (
+
     character ===
       'cheng_xiaoshi' ||
 
     character ===
-      'lu_guang'
+      'lu_guang' ||
+
+    character ===
+      'qiao_ling'
   );
 }
 
@@ -299,12 +304,20 @@ function resetRoundState(
 
   squad.ready =
     {};
+
+
+  squad.roundRoster =
+    [];
+
+
+  squad.roundStatsRecorded =
+    false;
 }
 
 
-// ============================================
-// USER PUBLIC DATA
-// ============================================
+// =====================================================
+// PUBLIC USER
+// =====================================================
 
 async function userPublicData(
   username
@@ -320,7 +333,9 @@ async function userPublicData(
       );
 
 
-  if (!user) {
+  if (
+    !user
+  ) {
 
     return null;
   }
@@ -338,15 +353,118 @@ async function userPublicData(
 }
 
 
-// ============================================
-// BUILD SQUAD PAYLOAD
-// ============================================
+// =====================================================
+// SERIALIZE CHARACTER MAP
+// =====================================================
+
+function serializeCharacterStats(
+  statsMap
+) {
+
+  const output =
+    {};
+
+
+  if (
+    !statsMap
+  ) {
+
+    return output;
+  }
+
+
+  if (
+    statsMap instanceof
+      Map
+  ) {
+
+    for (
+      const [
+        character,
+        stats
+      ]
+      of statsMap.entries()
+    ) {
+
+      output[
+        character
+      ] = {
+
+        pvpMatches:
+          Number(
+            stats.pvpMatches
+          ) ||
+          0,
+
+        pvpWins:
+          Number(
+            stats.pvpWins
+          ) ||
+          0,
+
+        proficiencyPoints:
+          Number(
+            stats.proficiencyPoints
+          ) ||
+          0
+      };
+    }
+
+
+    return output;
+  }
+
+
+  for (
+    const [
+      character,
+      stats
+    ]
+    of Object.entries(
+      statsMap
+    )
+  ) {
+
+    output[
+      character
+    ] = {
+
+      pvpMatches:
+        Number(
+          stats.pvpMatches
+        ) ||
+        0,
+
+      pvpWins:
+        Number(
+          stats.pvpWins
+        ) ||
+        0,
+
+      proficiencyPoints:
+        Number(
+          stats.proficiencyPoints
+        ) ||
+        0
+    };
+  }
+
+
+  return output;
+}
+
+
+// =====================================================
+// SQUAD PAYLOAD
+// =====================================================
 
 async function buildSquadPayload(
   squad
 ) {
 
-  if (!squad) {
+  if (
+    !squad
+  ) {
 
     return null;
   }
@@ -364,7 +482,9 @@ async function buildSquadPayload(
         )
       )
     )
-      .filter(Boolean);
+      .filter(
+        Boolean
+      );
 
 
   return {
@@ -399,10 +519,6 @@ async function buildSquadPayload(
 }
 
 
-// ============================================
-// BROADCAST SQUAD STATE
-// ============================================
-
 async function emitSquadState(
   squad
 ) {
@@ -413,7 +529,9 @@ async function emitSquadState(
     );
 
 
-  if (payload) {
+  if (
+    payload
+  ) {
 
     io
       .to(
@@ -428,14 +546,208 @@ async function emitSquadState(
   }
 }
 
+
+// =====================================================
+// RECORD COMPLETED PVP
+// =====================================================
+
+async function recordPvpMatch(
+  squad,
+  winner
+) {
+
+  if (
+    squad.roundStatsRecorded
+  ) {
+
+    return;
+  }
+
+
+  if (
+    squad.mode !==
+      'pvp'
+  ) {
+
+    return;
+  }
+
+
+  const roster =
+    Array.isArray(
+      squad.roundRoster
+    )
+
+      ? squad.roundRoster
+
+      : [];
+
+
+  /*
+    SOLO TESTS ARE NOT COUNTED.
+  */
+
+  if (
+    roster.length <
+      2
+  ) {
+
+    return;
+  }
+
+
+  /*
+    Mark BEFORE asynchronous writes so
+    duplicate finish calls cannot award twice.
+  */
+
+  squad.roundStatsRecorded =
+    true;
+
+
+  const matchId =
+    crypto.randomUUID();
+
+
+  const playedAt =
+    new Date();
+
+
+  const winnerUsername =
+    winner.name;
+
+
+  await Promise.all(
+
+    roster.map(
+      async participant => {
+
+        const won =
+          participant.username ===
+          winnerUsername;
+
+
+        const proficiencyAward =
+          won
+            ? 2
+            : 1;
+
+
+        const increments = {
+
+          matchesPlayed:
+            1,
+
+          [`characterStats.${participant.character}.pvpMatches`]:
+            1,
+
+          [`characterStats.${participant.character}.proficiencyPoints`]:
+            proficiencyAward
+        };
+
+
+        if (
+          won
+        ) {
+
+          increments[
+            `characterStats.${participant.character}.pvpWins`
+          ] =
+            1;
+        }
+
+
+        const historyEntry = {
+
+          matchId,
+
+          playedAt,
+
+          character:
+            participant.character,
+
+          won,
+
+          proficiencyAward,
+
+          winnerUsername,
+
+          rosterSize:
+            roster.length,
+
+          roster:
+            roster.map(
+              member => ({
+
+                username:
+                  member.username,
+
+                character:
+                  member.character
+              })
+            )
+        };
+
+
+        const result =
+          await User.updateOne(
+
+            {
+              username:
+                participant.username
+            },
+
+            {
+              $inc:
+                increments,
+
+              $push: {
+
+                pvpMatchHistory:
+                  historyEntry
+              }
+            }
+          );
+
+
+        console.log(
+
+          '[PVP STATS]',
+
+          participant.username,
+
+          participant.character,
+
+          won
+            ? '+2 proficiency WIN'
+            : '+1 proficiency',
+
+          'matched:',
+          result.matchedCount,
+
+          'modified:',
+          result.modifiedCount
+        );
+      }
+    )
+  );
+
+
+  console.log(
+    `[PVP STATS] Saved match ${matchId}; winner: ${winnerUsername}; roster: ${roster.length}`
+  );
+}
+
+
+// =====================================================
+// FINISH ROUND
+// =====================================================
+
 async function finishPvpRound(
   squad,
   winner
 ) {
 
-  /*
-    Make sure this squad still exists.
-  */
   const existing =
     activeSquads.get(
       squad.host
@@ -444,10 +756,32 @@ async function finishPvpRound(
 
   if (
     !existing ||
-    existing !== squad
+    existing !==
+      squad
   ) {
 
     return;
+  }
+
+
+  /*
+    CRITICAL:
+    Save BEFORE clearing selections.
+  */
+
+  try {
+
+    await recordPvpMatch(
+      squad,
+      winner
+    );
+
+  } catch (error) {
+
+    console.error(
+      '[PVP STATS] Failed to record match:',
+      error
+    );
   }
 
 
@@ -463,10 +797,14 @@ async function finishPvpRound(
     {};
 
 
-  /*
-    Force all surviving/dead/spectating
-    players back into squad lobby.
-  */
+  squad.roundRoster =
+    [];
+
+
+  squad.roundStatsRecorded =
+    false;
+
+
   io
     .to(
       roomForSquad(
@@ -489,6 +827,10 @@ async function finishPvpRound(
 }
 
 
+// =====================================================
+// COMBAT
+// =====================================================
+
 const combatManager =
   new CombatManager({
 
@@ -507,9 +849,9 @@ const combatManager =
   });
 
 
-// ============================================
+// =====================================================
 // LEAVE SQUAD
-// ============================================
+// =====================================================
 
 async function leaveCurrentSquad(
   username,
@@ -524,7 +866,9 @@ async function leaveCurrentSquad(
     );
 
 
-  if (!squad) {
+  if (
+    !squad
+  ) {
 
     return;
   }
@@ -542,13 +886,9 @@ async function leaveCurrentSquad(
     );
 
 
-  /*
-    HOST LEAVES:
-    disband entire squad.
-  */
   if (
     squad.host ===
-    username
+      username
   ) {
 
     const remainingMembers =
@@ -574,12 +914,6 @@ async function leaveCurrentSquad(
       of remainingMembers
     ) {
 
-      userSquadHosts.set(
-        member,
-        member
-      );
-
-
       makeSoloSquad(
         member,
         squad.mode
@@ -592,15 +926,22 @@ async function leaveCurrentSquad(
         );
 
 
-      if (memberSocketId) {
+      if (
+        memberSocketId
+      ) {
 
         const memberSocket =
-          io.sockets.sockets.get(
-            memberSocketId
-          );
+          io
+            .sockets
+            .sockets
+            .get(
+              memberSocketId
+            );
 
 
-        if (memberSocket) {
+        if (
+          memberSocket
+        ) {
 
           memberSocket.leave(
             oldRoom
@@ -615,6 +956,7 @@ async function leaveCurrentSquad(
           memberSocket.emit(
             'squad_disbanded',
             {
+
               message:
                 'The squad host returned to the lobby.'
             }
@@ -627,11 +969,6 @@ async function leaveCurrentSquad(
     return;
   }
 
-
-  /*
-    NON-HOST LEAVES:
-    remove only that player.
-  */
 
   squad.members =
     squad.members.filter(
@@ -656,7 +993,9 @@ async function leaveCurrentSquad(
   );
 
 
-  if (!disconnecting) {
+  if (
+    !disconnecting
+  ) {
 
     makeSoloSquad(
       username,
@@ -665,22 +1004,31 @@ async function leaveCurrentSquad(
   }
 
 
-  if (socketId) {
+  if (
+    socketId
+  ) {
 
     const userSocket =
-      io.sockets.sockets.get(
-        socketId
-      );
+      io
+        .sockets
+        .sockets
+        .get(
+          socketId
+        );
 
 
-    if (userSocket) {
+    if (
+      userSocket
+    ) {
 
       userSocket.leave(
         oldRoom
       );
 
 
-      if (!disconnecting) {
+      if (
+        !disconnecting
+      ) {
 
         userSocket.join(
           `squad_${username}`
@@ -695,20 +1043,14 @@ async function leaveCurrentSquad(
   );
 
 
-  /*
-    If somebody leaves while
-    players are choosing characters,
-    update the remaining players.
-  */
-
   if (
     squad.phase ===
-    'character'
+      'character'
   ) {
 
     if (
       squad.mode ===
-      'pvp'
+        'pvp'
     ) {
 
       io
@@ -736,7 +1078,9 @@ async function leaveCurrentSquad(
 
 
       const everyoneReady =
-        squad.members.length > 0 &&
+
+        squad.members.length >
+          0 &&
 
         squad.members.every(
           member =>
@@ -751,7 +1095,9 @@ async function leaveCurrentSquad(
         );
 
 
-      if (everyoneReady) {
+      if (
+        everyoneReady
+      ) {
 
         startArenaForSquad(
           squad
@@ -784,9 +1130,9 @@ async function leaveCurrentSquad(
 }
 
 
-// ============================================
-// SPAWN POSITIONS
-// ============================================
+// =====================================================
+// SPAWNS
+// =====================================================
 
 function getSpawnLayout(
   count
@@ -796,11 +1142,10 @@ function getSpawnLayout(
     20;
 
 
-  /*
-    1 PLAYER:
-    north edge
-  */
-  if (count <= 1) {
+  if (
+    count <=
+      1
+  ) {
 
     return [
       {
@@ -817,11 +1162,10 @@ function getSpawnLayout(
   }
 
 
-  /*
-    2 PLAYERS:
-    opposite edges
-  */
-  if (count === 2) {
+  if (
+    count ===
+      2
+  ) {
 
     return [
 
@@ -850,11 +1194,10 @@ function getSpawnLayout(
   }
 
 
-  /*
-    3 PLAYERS:
-    three separate edges
-  */
-  if (count === 3) {
+  if (
+    count ===
+      3
+  ) {
 
     return [
 
@@ -877,7 +1220,8 @@ function getSpawnLayout(
           0,
 
         rotation:
-          -Math.PI / 2
+          -Math.PI /
+          2
       },
 
       {
@@ -894,10 +1238,6 @@ function getSpawnLayout(
   }
 
 
-  /*
-    4 PLAYERS:
-    all four edges
-  */
   return [
 
     {
@@ -919,7 +1259,8 @@ function getSpawnLayout(
         0,
 
       rotation:
-        -Math.PI / 2
+        -Math.PI /
+        2
     },
 
     {
@@ -941,59 +1282,66 @@ function getSpawnLayout(
         0,
 
       rotation:
-        Math.PI / 2
+        Math.PI /
+        2
     }
   ];
 }
 
 
-// ============================================
+// =====================================================
 // START ARENA
-// ============================================
+// =====================================================
 
 function startArenaForSquad(
   squad
 ) {
 
-  const socketIds =
+  const participants =
     squad.members
       .map(
-        username =>
-          onlineUsers.get(
-            username
-          )
+        username => ({
+
+          username,
+
+          socketId:
+            onlineUsers.get(
+              username
+            )
+        })
       )
-      .filter(Boolean);
+      .filter(
+        participant =>
+          Boolean(
+            participant.socketId
+          )
+      );
 
 
   const spawns =
     getSpawnLayout(
-      socketIds.length
+      participants.length
     );
 
 
-  socketIds.forEach(
+  participants.forEach(
     (
-      socketId,
+      participant,
       index
     ) => {
 
-      const username =
-        squad.members[
-          index
-        ];
-
-
       const character =
         squad.selections[
-          username
+          participant.username
         ] ||
         'cheng_xiaoshi';
 
 
       gameManager
         .setPlayerCharacter(
-          socketId,
+
+          participant.socketId,
+
           character
         );
 
@@ -1007,7 +1355,7 @@ function startArenaForSquad(
       gameManager
         .setPlayerSpawn(
 
-          socketId,
+          participant.socketId,
 
           spawn.x,
 
@@ -1020,9 +1368,59 @@ function startArenaForSquad(
 
 
   /*
-    Initialize HP, cooldowns,
-    stun states, buffs, regen, etc.
+    CRITICAL PROFICIENCY SNAPSHOT.
+
+    We save this BEFORE selections are
+    ever reset and use only players who
+    actually made it into the arena.
   */
+
+  if (
+    squad.mode ===
+      'pvp'
+  ) {
+
+    squad.roundRoster =
+      participants.map(
+        participant => ({
+
+          username:
+            participant.username,
+
+          character:
+            squad.selections[
+              participant.username
+            ] ||
+            'cheng_xiaoshi'
+        })
+      );
+
+
+    squad.roundStatsRecorded =
+      false;
+
+  } else {
+
+    squad.roundRoster =
+      [];
+
+
+    squad.roundStatsRecorded =
+      false;
+  }
+
+
+  /*
+    Set phase BEFORE combat initialization.
+
+    This avoids any code observing a
+    half-started character-selection state.
+  */
+
+  squad.phase =
+    'arena';
+
+
   combatManager
     .startForSquad(
       squad
@@ -1030,28 +1428,30 @@ function startArenaForSquad(
 
 
   const players =
-    socketIds
+    participants
       .map(
-        id => {
+        participant => {
 
           const player =
             gameManager
-              .getPlayer(id);
+              .getPlayer(
+                participant.socketId
+              );
 
 
           return player
+
             ? combatManager
                 .publicPlayer(
                   player
                 )
+
             : null;
         }
       )
-      .filter(Boolean);
-
-
-  squad.phase =
-    'arena';
+      .filter(
+        Boolean
+      );
 
 
   io
@@ -1073,9 +1473,9 @@ function startArenaForSquad(
 }
 
 
-// ============================================
+// =====================================================
 // REGISTER
-// ============================================
+// =====================================================
 
 app.post(
   '/api/register',
@@ -1099,8 +1499,11 @@ app.post(
       ) {
 
         return res
-          .status(400)
+          .status(
+            400
+          )
           .json({
+
             message:
               'Username and password required'
           });
@@ -1109,12 +1512,15 @@ app.post(
 
       if (
         username.length <
-        3
+          3
       ) {
 
         return res
-          .status(400)
+          .status(
+            400
+          )
           .json({
+
             message:
               'Username must be at least 3 characters'
           });
@@ -1123,12 +1529,15 @@ app.post(
 
       if (
         password.length <
-        6
+          6
       ) {
 
         return res
-          .status(400)
+          .status(
+            400
+          )
           .json({
+
             message:
               'Password must be at least 6 characters'
           });
@@ -1141,11 +1550,16 @@ app.post(
         });
 
 
-      if (userExists) {
+      if (
+        userExists
+      ) {
 
         return res
-          .status(400)
+          .status(
+            400
+          )
           .json({
+
             message:
               'Username already taken'
           });
@@ -1154,7 +1568,9 @@ app.post(
 
       const user =
         new User({
+
           username,
+
           password
         });
 
@@ -1166,6 +1582,7 @@ app.post(
         jwt.sign(
 
           {
+
             id:
               user._id,
 
@@ -1193,8 +1610,11 @@ app.post(
     } catch (error) {
 
       return res
-        .status(500)
+        .status(
+          500
+        )
         .json({
+
           message:
             error.message ||
             'Server error during registration'
@@ -1204,9 +1624,9 @@ app.post(
 );
 
 
-// ============================================
+// =====================================================
 // LOGIN
-// ============================================
+// =====================================================
 
 app.post(
   '/api/login',
@@ -1230,8 +1650,11 @@ app.post(
       ) {
 
         return res
-          .status(400)
+          .status(
+            400
+          )
           .json({
+
             message:
               'Username and password required'
           });
@@ -1254,8 +1677,11 @@ app.post(
       ) {
 
         return res
-          .status(400)
+          .status(
+            400
+          )
           .json({
+
             message:
               'Invalid credentials'
           });
@@ -1266,6 +1692,7 @@ app.post(
         jwt.sign(
 
           {
+
             id:
               user._id,
 
@@ -1293,8 +1720,11 @@ app.post(
     } catch (error) {
 
       return res
-        .status(500)
+        .status(
+          500
+        )
         .json({
+
           message:
             'Server error during login'
         });
@@ -1303,24 +1733,30 @@ app.post(
 );
 
 
-// ============================================
+// =====================================================
 // SOCKET.IO
-// ============================================
+// =====================================================
 
 io.on(
   'connection',
   socket => {
 
-    let authenticatedUser = null;
-    
+    let authenticatedUser =
+      null;
+
+
     combatManager.registerSocket(
+
       socket,
-      () => authenticatedUser
+
+      () =>
+        authenticatedUser
     );
 
-    // ========================================
+
+    // =================================================
     // PLAYER LOGIN
-    // ========================================
+    // =================================================
 
     socket.on(
       'player_login',
@@ -1351,7 +1787,9 @@ io.on(
           );
 
 
-        if (!squad) {
+        if (
+          !squad
+        ) {
 
           squad =
             makeSoloSquad(
@@ -1371,6 +1809,7 @@ io.on(
         const user =
           await User
             .findOne({
+
               username:
                 authenticatedUser
             })
@@ -1394,9 +1833,9 @@ io.on(
     );
 
 
-    // ========================================
+    // =================================================
     // ENTER MODE
-    // ========================================
+    // =================================================
 
     socket.on(
       'enter_mode',
@@ -1409,7 +1848,9 @@ io.on(
           ![
             'match',
             'pvp'
-          ].includes(mode)
+          ].includes(
+            mode
+          )
         ) {
 
           return;
@@ -1422,10 +1863,6 @@ io.on(
           );
 
 
-        /*
-          Guests cannot silently
-          change somebody else's squad mode.
-        */
         if (
           currentSquad &&
           currentSquad.host !==
@@ -1435,6 +1872,7 @@ io.on(
           socket.emit(
             'squad_error',
             {
+
               message:
                 'Leave your current squad before opening another mode.'
             }
@@ -1445,10 +1883,6 @@ io.on(
         }
 
 
-        /*
-          If host currently owns a real squad,
-          opening a different mode disbands it.
-        */
         if (
           currentSquad &&
           currentSquad.members.length >
@@ -1467,7 +1901,9 @@ io.on(
           );
 
 
-        if (!squad) {
+        if (
+          !squad
+        ) {
 
           squad =
             makeSoloSquad(
@@ -1505,15 +1941,17 @@ io.on(
     );
 
 
-    // ========================================
-    // REQUEST SQUAD STATE
-    // ========================================
+    // =================================================
+    // REQUEST SQUAD
+    // =================================================
 
     socket.on(
       'request_squad_state',
       async () => {
 
-        if (!authenticatedUser) {
+        if (
+          !authenticatedUser
+        ) {
 
           return;
         }
@@ -1531,7 +1969,9 @@ io.on(
           );
 
 
-        if (payload) {
+        if (
+          payload
+        ) {
 
           socket.emit(
             'squad_updated',
@@ -1542,9 +1982,9 @@ io.on(
     );
 
 
-    // ========================================
-    // SEND SQUAD INVITE
-    // ========================================
+    // =================================================
+    // INVITE
+    // =================================================
 
     socket.on(
       'send_squad_invite',
@@ -1552,7 +1992,9 @@ io.on(
         targetUsername
       }) => {
 
-        if (!authenticatedUser) {
+        if (
+          !authenticatedUser
+        ) {
 
           return;
         }
@@ -1584,6 +2026,7 @@ io.on(
           socket.emit(
             'squad_error',
             {
+
               message:
                 'Your squad is full.'
             }
@@ -1610,11 +2053,14 @@ io.on(
           );
 
 
-        if (!recipientSocketId) {
+        if (
+          !recipientSocketId
+        ) {
 
           socket.emit(
             'squad_error',
             {
+
               message:
                 'That friend is offline.'
             }
@@ -1658,9 +2104,9 @@ io.on(
     );
 
 
-    // ========================================
+    // =================================================
     // ACCEPT INVITE
-    // ========================================
+    // =================================================
 
     socket.on(
       'accept_squad_invite',
@@ -1693,6 +2139,7 @@ io.on(
           socket.emit(
             'squad_error',
             {
+
               message:
                 'That squad is no longer available.'
             }
@@ -1713,6 +2160,7 @@ io.on(
           socket.emit(
             'squad_error',
             {
+
               message:
                 'That squad is already full.'
             }
@@ -1729,11 +2177,6 @@ io.on(
           );
 
 
-        /*
-          Don't let a host abandon
-          their own populated squad
-          by accepting another invite.
-        */
         if (
           currentSquad &&
           currentSquad.host ===
@@ -1745,6 +2188,7 @@ io.on(
           socket.emit(
             'squad_error',
             {
+
               message:
                 'Leave or disband your current squad first.'
             }
@@ -1755,7 +2199,9 @@ io.on(
         }
 
 
-        if (currentSquad) {
+        if (
+          currentSquad
+        ) {
 
           socket.leave(
             roomForSquad(
@@ -1830,6 +2276,7 @@ io.on(
         socket.emit(
           'joined_squad',
           {
+
             mode:
               targetSquad.mode
           }
@@ -1838,15 +2285,17 @@ io.on(
     );
 
 
-    // ========================================
-    // LEAVE SQUAD
-    // ========================================
+    // =================================================
+    // LEAVE
+    // =================================================
 
     socket.on(
       'leave_squad',
       async () => {
 
-        if (!authenticatedUser) {
+        if (
+          !authenticatedUser
+        ) {
 
           return;
         }
@@ -1864,15 +2313,17 @@ io.on(
     );
 
 
-    // ========================================
-    // START CHARACTER SELECT
-    // ========================================
+    // =================================================
+    // CHARACTER SELECT
+    // =================================================
 
     socket.on(
       'start_character_select',
-      async () => {
+      () => {
 
-        if (!authenticatedUser) {
+        if (
+          !authenticatedUser
+        ) {
 
           return;
         }
@@ -1896,10 +2347,6 @@ io.on(
         }
 
 
-        /*
-          MATCH specifically requires
-          exactly 2 players.
-        */
         if (
           squad.mode ===
             'match' &&
@@ -1910,6 +2357,7 @@ io.on(
           socket.emit(
             'squad_error',
             {
+
               message:
                 'MATCH requires exactly 2 players.'
             }
@@ -1919,11 +2367,6 @@ io.on(
           return;
         }
 
-
-        /*
-          PVP has NO minimum beyond host.
-          1, 2, 3, or 4 all work.
-        */
 
         squad.phase =
           'character';
@@ -1958,9 +2401,9 @@ io.on(
     );
 
 
-    // ========================================
-    // SELECT CHARACTER
-    // ========================================
+    // =================================================
+    // CHOOSE CHARACTER
+    // =================================================
 
     socket.on(
       'select_character',
@@ -1996,14 +2439,9 @@ io.on(
         }
 
 
-        /*
-          MATCH:
-          locked character cannot
-          be taken by teammate.
-        */
         if (
           squad.mode ===
-          'match'
+            'match'
         ) {
 
           const teammate =
@@ -2028,6 +2466,7 @@ io.on(
             socket.emit(
               'character_error',
               {
+
                 message:
                   'Your teammate already locked that character.'
               }
@@ -2038,11 +2477,6 @@ io.on(
           }
         }
 
-
-        /*
-          PVP:
-          duplicates ARE allowed.
-        */
 
         squad.selections[
           authenticatedUser
@@ -2057,13 +2491,9 @@ io.on(
           );
 
 
-        /*
-          MATCH reveals selection
-          because exclusivity requires it.
-        */
         if (
           squad.mode ===
-          'match'
+            'match'
         ) {
 
           const publicSelections =
@@ -2106,14 +2536,10 @@ io.on(
 
         } else {
 
-          /*
-            PVP selection goes ONLY
-            back to the player who chose it.
-          */
-
           socket.emit(
             'pvp_own_selection',
             {
+
               character
             }
           );
@@ -2122,15 +2548,17 @@ io.on(
     );
 
 
-    // ========================================
-    // READY CHARACTER
-    // ========================================
+    // =================================================
+    // LOCK / READY
+    // =================================================
 
     socket.on(
       'ready_character',
       () => {
 
-        if (!authenticatedUser) {
+        if (
+          !authenticatedUser
+        ) {
 
           return;
         }
@@ -2158,11 +2586,14 @@ io.on(
           ];
 
 
-        if (!chosen) {
+        if (
+          !chosen
+        ) {
 
           socket.emit(
             'character_error',
             {
+
               message:
                 'Choose a character first.'
             }
@@ -2173,14 +2604,9 @@ io.on(
         }
 
 
-        /*
-          MATCH race-condition check:
-          prevents two players
-          locking same character.
-        */
         if (
           squad.mode ===
-          'match'
+            'match'
         ) {
 
           const teammate =
@@ -2205,6 +2631,7 @@ io.on(
             socket.emit(
               'character_error',
               {
+
                 message:
                   'Your teammate already locked that character.'
               }
@@ -2222,12 +2649,9 @@ io.on(
           true;
 
 
-        /*
-          MATCH STATE
-        */
         if (
           squad.mode ===
-          'match'
+            'match'
         ) {
 
           io
@@ -2251,11 +2675,6 @@ io.on(
             );
 
         } else {
-
-          /*
-            PVP only exposes ready count.
-            Character choices stay private.
-          */
 
           io
             .to(
@@ -2282,11 +2701,6 @@ io.on(
         }
 
 
-        /*
-          Start automatically when
-          EVERY CURRENT MEMBER is ready.
-        */
-
         const everyoneReady =
           squad.members.every(
             member =>
@@ -2301,7 +2715,9 @@ io.on(
           );
 
 
-        if (everyoneReady) {
+        if (
+          everyoneReady
+        ) {
 
           startArenaForSquad(
             squad
@@ -2311,63 +2727,54 @@ io.on(
     );
 
 
-    // ========================================
-    // PLAYER MOVEMENT
-    // ========================================
+    // =================================================
+    // MOVEMENT
+    // =================================================
 
     socket.on(
       'player_move',
       data => {
-    
+
         if (
           !authenticatedUser
         ) {
-    
+
           return;
         }
-    
-    
+
+
         const squad =
           getSquadForUser(
             authenticatedUser
           );
-    
-    
+
+
         if (
           !squad ||
           squad.phase !==
             'arena'
         ) {
-    
+
           return;
         }
-    
-    
-        /*
-          Server verifies:
-    
-          - alive
-          - not stunned
-          - legitimate movement speed
-          - speed buffs
-          - arena boundaries
-        */
+
+
         const updatedPlayer =
           combatManager
             .validateMovement(
-    
+
               socket,
-    
+
               authenticatedUser,
-    
+
               data
             );
-    
-    
+
+
         if (
           updatedPlayer
         ) {
-    
+
           socket
             .to(
               roomForSquad(
@@ -2376,7 +2783,7 @@ io.on(
             )
             .emit(
               'player_moved',
-    
+
               combatManager
                 .publicPlayer(
                   updatedPlayer
@@ -2387,20 +2794,21 @@ io.on(
     );
 
 
-    // ========================================
+    // =================================================
     // DISCONNECT
-    // ========================================
+    // =================================================
 
     socket.on(
       'disconnect',
       async () => {
 
-        if (!authenticatedUser) {
+        if (
+          !authenticatedUser
+        ) {
 
-          gameManager
-            .removePlayer(
-              socket.id
-            );
+          gameManager.removePlayer(
+            socket.id
+          );
 
 
           return;
@@ -2427,7 +2835,9 @@ io.on(
 
 
         await leaveCurrentSquad(
+
           authenticatedUser,
+
           {
             disconnecting:
               true
@@ -2440,16 +2850,19 @@ io.on(
         );
 
 
-        gameManager
-          .removePlayer(
-            socket.id
-          );
+        gameManager.removePlayer(
+          socket.id
+        );
 
 
-        if (room) {
+        if (
+          room
+        ) {
 
           socket
-            .to(room)
+            .to(
+              room
+            )
             .emit(
               'player_left',
               socket.id
@@ -2458,10 +2871,6 @@ io.on(
       }
     );
 
-
-    // ========================================
-    // REAL-TIME FRIEND REQUEST
-    // ========================================
 
     socket.on(
       'send_friend_request',
@@ -2473,7 +2882,9 @@ io.on(
           );
 
 
-        if (targetSocketId) {
+        if (
+          targetSocketId
+        ) {
 
           io
             .to(
@@ -2482,6 +2893,7 @@ io.on(
             .emit(
               'friend_request_received',
               {
+
                 from:
                   data.from
               }
@@ -2493,9 +2905,9 @@ io.on(
 );
 
 
-// ============================================
-// PROFILE ENDPOINT
-// ============================================
+// =====================================================
+// PROFILE
+// =====================================================
 
 app.get(
   '/api/profile/:username',
@@ -2509,6 +2921,7 @@ app.get(
       const user =
         await User
           .findOne({
+
             username:
               req.params.username
           })
@@ -2517,11 +2930,16 @@ app.get(
           );
 
 
-      if (!user) {
+      if (
+        !user
+      ) {
 
         return res
-          .status(404)
+          .status(
+            404
+          )
           .json({
+
             message:
               'User not found'
           });
@@ -2546,6 +2964,7 @@ app.get(
         const viewer =
           await User
             .findOne({
+
               username:
                 viewerUsername
             })
@@ -2554,7 +2973,9 @@ app.get(
             );
 
 
-        if (viewer) {
+        if (
+          viewer
+        ) {
 
           isFriend =
             viewer.friends.some(
@@ -2563,42 +2984,6 @@ app.get(
                 friendId.toString() ===
                 user._id.toString()
             );
-        }
-      }
-
-
-      const characterStats =
-        {};
-
-
-      if (
-        user.characterStats
-      ) {
-
-        for (
-          const [
-            character,
-            stats
-          ]
-          of user.characterStats.entries()
-        ) {
-
-          characterStats[
-            character
-          ] = {
-
-            pvpMatches:
-              stats.pvpMatches ||
-              0,
-
-            pvpWins:
-              stats.pvpWins ||
-              0,
-
-            proficiencyPoints:
-              stats.proficiencyPoints ||
-              0
-          };
         }
       }
 
@@ -2613,7 +2998,9 @@ app.get(
           '',
 
         matchesPlayed:
-          user.matchesPlayed ||
+          Number(
+            user.matchesPlayed
+          ) ||
           0,
 
         friendsCount:
@@ -2632,7 +3019,14 @@ app.get(
           user.showcasedCharacters ||
           [],
 
-        characterStats
+        /*
+          THIS WAS MISSING FROM THE
+          SERVER YOU UPLOADED.
+        */
+        characterStats:
+          serializeCharacterStats(
+            user.characterStats
+          )
       });
 
     } catch (error) {
@@ -2644,8 +3038,11 @@ app.get(
 
 
       res
-        .status(500)
+        .status(
+          500
+        )
         .json({
+
           message:
             'Server error fetching profile'
         });
@@ -2653,158 +3050,10 @@ app.get(
   }
 );
 
-// ============================================
-// UPDATE CHARACTER SHOWCASE
-// ============================================
 
-app.post(
-  '/api/profile/showcase',
-  async (
-    req,
-    res
-  ) => {
-
-    try {
-
-      const {
-        username,
-        characters
-      } =
-        req.body;
-
-
-      if (
-        !username ||
-        !Array.isArray(
-          characters
-        )
-      ) {
-
-        return res
-          .status(400)
-          .json({
-            message:
-              'Invalid showcase data'
-          });
-      }
-
-
-      /*
-        Remove duplicates.
-      */
-
-      const uniqueCharacters =
-        [
-          ...new Set(
-            characters
-          )
-        ];
-
-
-      if (
-        uniqueCharacters.length >
-        3
-      ) {
-
-        return res
-          .status(400)
-          .json({
-            message:
-              'You can showcase at most 3 characters.'
-          });
-      }
-
-
-      /*
-        Only characters actually
-        supported by the game.
-      */
-
-      const invalidCharacter =
-        uniqueCharacters.find(
-          character =>
-
-            !validCharacter(
-              character
-            )
-        );
-
-
-      if (
-        invalidCharacter
-      ) {
-
-        return res
-          .status(400)
-          .json({
-            message:
-              'Invalid character'
-          });
-      }
-
-
-      const user =
-        await User
-          .findOneAndUpdate(
-
-            {
-              username
-            },
-
-            {
-              showcasedCharacters:
-                uniqueCharacters
-            },
-
-            {
-              new:
-                true
-            }
-          );
-
-
-      if (!user) {
-
-        return res
-          .status(404)
-          .json({
-            message:
-              'User not found'
-          });
-      }
-
-
-      res.json({
-
-        success:
-          true,
-
-        showcasedCharacters:
-          user.showcasedCharacters
-      });
-
-    } catch (error) {
-
-      console.error(
-        'Showcase update error:',
-        error
-      );
-
-
-      res
-        .status(500)
-        .json({
-          message:
-            'Failed to update showcase'
-        });
-    }
-  }
-);
-
-
-// ============================================
-// AVATAR ENDPOINT
-// ============================================
+// =====================================================
+// AVATAR
+// =====================================================
 
 app.post(
   '/api/profile/avatar',
@@ -2844,11 +3093,16 @@ app.post(
           );
 
 
-      if (!user) {
+      if (
+        !user
+      ) {
 
         return res
-          .status(404)
+          .status(
+            404
+          )
           .json({
+
             message:
               'User not found'
           });
@@ -2867,8 +3121,11 @@ app.post(
     } catch (error) {
 
       res
-        .status(500)
+        .status(
+          500
+        )
         .json({
+
           message:
             'Failed to update avatar'
         });
@@ -2877,9 +3134,164 @@ app.post(
 );
 
 
-// ============================================
+// =====================================================
+// CHARACTER SHOWCASE
+// =====================================================
+
+app.post(
+  '/api/profile/showcase',
+  async (
+    req,
+    res
+  ) => {
+
+    try {
+
+      const {
+        username,
+        characters
+      } =
+        req.body;
+
+
+      if (
+        !username ||
+        !Array.isArray(
+          characters
+        )
+      ) {
+
+        return res
+          .status(
+            400
+          )
+          .json({
+
+            message:
+              'Invalid showcase data'
+          });
+      }
+
+
+      const unique =
+        [
+          ...new Set(
+            characters
+          )
+        ];
+
+
+      if (
+        unique.length >
+          3
+      ) {
+
+        return res
+          .status(
+            400
+          )
+          .json({
+
+            message:
+              'You can showcase at most 3 characters.'
+          });
+      }
+
+
+      if (
+        unique.some(
+          character =>
+            !validCharacter(
+              character
+            )
+        )
+      ) {
+
+        return res
+          .status(
+            400
+          )
+          .json({
+
+            message:
+              'Invalid character'
+          });
+      }
+
+
+      const user =
+        await User
+          .findOneAndUpdate(
+
+            {
+              username
+            },
+
+            {
+              showcasedCharacters:
+                unique
+            },
+
+            {
+              new:
+                true,
+
+              runValidators:
+                true
+            }
+          );
+
+
+      if (
+        !user
+      ) {
+
+        return res
+          .status(
+            404
+          )
+          .json({
+
+            message:
+              'User not found'
+          });
+      }
+
+
+      res.json({
+
+        success:
+          true,
+
+        showcasedCharacters:
+          user.showcasedCharacters
+      });
+
+    } catch (error) {
+
+      console.error(
+        'Showcase error:',
+        error
+      );
+
+
+      res
+        .status(
+          500
+        )
+        .json({
+
+          message:
+            'Failed to update showcase'
+        });
+    }
+  }
+);
+
+
+// =====================================================
 // FRIEND LIST
-// ============================================
+// =====================================================
 
 app.get(
   '/api/friends/list',
@@ -2907,13 +3319,18 @@ app.get(
           );
 
 
-      if (!user) {
+      if (
+        !user
+      ) {
 
-        return res.json([]);
+        return res.json(
+          []
+        );
       }
 
 
-      const list =
+      res.json(
+
         (
           user.friends ||
           []
@@ -2933,18 +3350,17 @@ app.get(
                   friend.username
                 )
             })
-          );
-
-
-      res.json(
-        list
+          )
       );
 
     } catch (error) {
 
       res
-        .status(500)
+        .status(
+          500
+        )
         .json({
+
           message:
             'Failed to load friends list'
         });
@@ -2953,13 +3369,9 @@ app.get(
 );
 
 
-// ============================================
+// =====================================================
 // EXACT FRIEND SEARCH
-// ============================================
-
-// ============================================
-// EXACT FRIEND SEARCH
-// ============================================
+// =====================================================
 
 app.get(
   '/api/friends/search',
@@ -2981,7 +3393,9 @@ app.get(
         ''
     ) {
 
-      return res.json([]);
+      return res.json(
+        []
+      );
     }
 
 
@@ -2990,11 +3404,6 @@ app.get(
       const searchedUsername =
         query.trim();
 
-
-      /*
-        Find both the person searching
-        and the exact target.
-      */
 
       const [
         searchingUser,
@@ -3012,6 +3421,7 @@ app.get(
 
           User
             .findOne({
+
               username:
                 searchedUsername
             })
@@ -3021,36 +3431,17 @@ app.get(
         ]);
 
 
-      /*
-        Target does not exist.
-      */
-
       if (
-        !targetUser
-      ) {
-
-        return res.json([]);
-      }
-
-
-      /*
-        Never return yourself.
-      */
-
-      if (
+        !targetUser ||
         targetUser.username ===
           username
       ) {
 
-        return res.json([]);
+        return res.json(
+          []
+        );
       }
 
-
-      /*
-        If already friends,
-        DO NOT return this person
-        in Find Friends.
-      */
 
       if (
         searchingUser
@@ -3071,12 +3462,15 @@ app.get(
           alreadyFriend
         ) {
 
-          return res.json([]);
+          return res.json(
+            []
+          );
         }
       }
 
 
       res.json([
+
         {
 
           username:
@@ -3090,15 +3484,12 @@ app.get(
 
     } catch (error) {
 
-      console.error(
-        'Friend search error:',
-        error
-      );
-
-
       res
-        .status(500)
+        .status(
+          500
+        )
         .json({
+
           message:
             'Failed to search users'
         });
@@ -3107,9 +3498,9 @@ app.get(
 );
 
 
-// ============================================
+// =====================================================
 // FRIEND REQUEST
-// ============================================
+// =====================================================
 
 app.post(
   '/api/friends/request',
@@ -3129,6 +3520,7 @@ app.post(
 
       const targetUser =
         await User.findOne({
+
           username:
             to
         });
@@ -3136,6 +3528,7 @@ app.post(
 
       const senderUser =
         await User.findOne({
+
           username:
             from
         });
@@ -3147,10 +3540,37 @@ app.post(
       ) {
 
         return res
-          .status(404)
+          .status(
+            404
+          )
           .json({
+
             message:
               'User not found'
+          });
+      }
+
+
+      const alreadyFriends =
+        senderUser.friends.some(
+          id =>
+            id.toString() ===
+            targetUser._id.toString()
+        );
+
+
+      if (
+        alreadyFriends
+      ) {
+
+        return res
+          .status(
+            400
+          )
+          .json({
+
+            message:
+              'You are already friends.'
           });
       }
 
@@ -3173,6 +3593,7 @@ app.post(
 
 
       res.json({
+
         message:
           'Friend request sent!'
       });
@@ -3180,8 +3601,11 @@ app.post(
     } catch (error) {
 
       res
-        .status(500)
+        .status(
+          500
+        )
         .json({
+
           message:
             'Error sending friend request'
         });
@@ -3190,9 +3614,9 @@ app.post(
 );
 
 
-// ============================================
-// FRIEND REQUEST LIST
-// ============================================
+// =====================================================
+// REQUEST LIST
+// =====================================================
 
 app.get(
   '/api/friends/requests',
@@ -3220,9 +3644,13 @@ app.get(
           );
 
 
-      if (!user) {
+      if (
+        !user
+      ) {
 
-        return res.json([]);
+        return res.json(
+          []
+        );
       }
 
 
@@ -3248,8 +3676,11 @@ app.get(
     } catch (error) {
 
       res
-        .status(500)
+        .status(
+          500
+        )
         .json({
+
           message:
             'Failed to load requests'
         });
@@ -3258,9 +3689,9 @@ app.get(
 );
 
 
-// ============================================
-// FRIEND REQUEST RESPONSE
-// ============================================
+// =====================================================
+// REQUEST RESPONSE
+// =====================================================
 
 app.post(
   '/api/friends/respond',
@@ -3287,6 +3718,7 @@ app.post(
 
       const targetUser =
         await User.findOne({
+
           username:
             target
         });
@@ -3298,8 +3730,11 @@ app.post(
       ) {
 
         return res
-          .status(404)
+          .status(
+            404
+          )
           .json({
+
             message:
               'User not found'
           });
@@ -3324,7 +3759,7 @@ app.post(
 
       if (
         action ===
-        'accept'
+          'accept'
       ) {
 
         await User.updateOne(
@@ -3362,6 +3797,7 @@ app.post(
 
 
       res.json({
+
         success:
           true
       });
@@ -3369,8 +3805,11 @@ app.post(
     } catch (error) {
 
       res
-        .status(500)
+        .status(
+          500
+        )
         .json({
+
           message:
             'Error responding to friend request'
         });
@@ -3379,9 +3818,9 @@ app.post(
 );
 
 
-// ============================================
-// SERVER START
-// ============================================
+// =====================================================
+// SERVER
+// =====================================================
 
 const PORT =
   process.env.PORT ||

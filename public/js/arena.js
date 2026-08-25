@@ -49,6 +49,42 @@ let matchEnded =
   false;
 
 
+// =====================================================
+// QIAO ULT CAMERA STATE
+// =====================================================
+
+/*
+  IMPORTANT:
+
+  This is NOT a second camera.
+
+  There is still only the normal Three.js
+  `camera`.
+
+  This number simply controls how much the
+  normal Shift-lock camera has transitioned
+  into Qiao's temporary aerial view.
+
+  0 = completely normal Shift-lock
+  1 = Qiao DAMAGE airborne view
+*/
+
+let qiaoUltCameraBlend =
+  0;
+
+
+/*
+  True only while LOCAL Qiao is airborne.
+*/
+
+let qiaoUltCameraActive =
+  false;
+
+
+// =====================================================
+// RENDERED STATE
+// =====================================================
+
 const remotePlayers =
   {};
 
@@ -64,14 +100,19 @@ const punchAnimations =
 const deathAnimations =
   {};
 
+const qiaoBoxingAnimations =
+  {};
 
-/*
-  This object stores the LOCAL
-  player's combat information.
+const qiaoDamageVisuals =
+  {};
 
-  It now supports BOTH Cheng
-  and Lu Guang.
-*/
+const qiaoImpactAnimations =
+  [];
+
+
+// =====================================================
+// LOCAL COMBAT STATE
+// =====================================================
 
 let selfCombat = {
 
@@ -90,11 +131,43 @@ let selfCombat = {
   stunnedUntil:
     0,
 
+  /*
+    Everyone briefly stops moving
+    during their basic attack.
+  */
+
+  attackLockedUntil:
+    0,
+
+  /*
+    Prevents actions during things such
+    as Qiao's airborne DAMAGE animation.
+
+    Does NOT stop WASD movement.
+  */
+
+  actionLockedUntil:
+    0,
+
+  // CHENG
+
   speedBuffUntil:
     0,
 
+  // QIAO
+
+  mobilityUntil:
+    0,
+
+  airborneUntil:
+    0,
+
+  // GENERAL
+
   strengthenUntil:
     0,
+
+  // COOLDOWNS
 
   basicReadyAt:
     0,
@@ -104,6 +177,8 @@ let selfCombat = {
 
   strengthenReadyAt:
     0,
+
+  // LU SHIELD
 
   shieldHp:
     0,
@@ -147,6 +222,14 @@ socket.on(
       0;
 
 
+    qiaoUltCameraActive =
+      false;
+
+
+    qiaoUltCameraBlend =
+      0;
+
+
     const me =
       players.find(
         player =>
@@ -155,7 +238,9 @@ socket.on(
       );
 
 
-    if (me) {
+    if (
+      me
+    ) {
 
       localPlayerId =
         me.id;
@@ -168,13 +253,6 @@ socket.on(
       selfCombat.character =
         me.character;
 
-
-      /*
-        Character HP comes from server.
-
-        Cheng = 850
-        Lu Guang = 600
-      */
 
       selfCombat.hp =
         me.hp ??
@@ -238,8 +316,11 @@ socket.on(
       .innerText =
 
         `${
-          mode === 'pvp'
+          mode ===
+            'pvp'
+
             ? 'PVP ARENA'
+
             : 'MATCH'
         } • ${
           characterDisplayName(
@@ -264,7 +345,9 @@ socket.on(
         'none';
 
 
-    if (!arenaInitialized) {
+    if (
+      !arenaInitialized
+    ) {
 
       initArena(
         players
@@ -319,6 +402,8 @@ function updateAbilityNames() {
     );
 
 
+  // CHENG
+
   if (
     selectedCharacter ===
       'cheng_xiaoshi'
@@ -343,6 +428,8 @@ function updateAbilityNames() {
     return;
   }
 
+
+  // LU
 
   if (
     selectedCharacter ===
@@ -369,9 +456,32 @@ function updateAbilityNames() {
   }
 
 
-  /*
-    Future character fallback.
-  */
+  // QIAO
+
+  if (
+    selectedCharacter ===
+      'qiao_ling'
+  ) {
+
+    basicName.innerText =
+      'BOXING';
+
+
+    abilityName.innerText =
+      'MOBILITY';
+
+
+    ultName.innerText =
+      'DAMAGE';
+
+
+    instructions.innerText =
+      'WASD Move • SHIFT Camera • SPACE Boxing • Q Mobility • E Damage';
+
+
+    return;
+  }
+
 
   basicName.innerText =
     'BASIC';
@@ -391,7 +501,7 @@ function updateAbilityNames() {
 
 
 // =====================================================
-// NAME + HEALTH BAR TEXTURE
+// NAMEPLATE TEXTURE
 // =====================================================
 
 function makeNameplateTexture(
@@ -448,9 +558,7 @@ function makeNameplateTexture(
   );
 
 
-  // -----------------------------------------------------
   // NAME
-  // -----------------------------------------------------
 
   ctx.font =
     'bold 34px Segoe UI';
@@ -492,9 +600,7 @@ function makeNameplateTexture(
   );
 
 
-  // -----------------------------------------------------
   // HEALTH BAR
-  // -----------------------------------------------------
 
   const barX =
     76;
@@ -534,14 +640,16 @@ function makeNameplateTexture(
 
 
   if (
-    ratio > 0.5
+    ratio >
+    0.5
   ) {
 
     ctx.fillStyle =
       '#39e66d';
 
   } else if (
-    ratio > 0.25
+    ratio >
+    0.25
   ) {
 
     ctx.fillStyle =
@@ -562,9 +670,7 @@ function makeNameplateTexture(
   );
 
 
-  // -----------------------------------------------------
-  // HP NUMBERS
-  // -----------------------------------------------------
+  // HP NUMBER
 
   ctx.font =
     'bold 22px Segoe UI';
@@ -583,7 +689,11 @@ function makeNameplateTexture(
 
 
   const hpText =
-    `${Math.ceil(hp)} / ${Math.ceil(maxHp)}`;
+    `${Math.ceil(
+      hp
+    )} / ${Math.ceil(
+      maxHp
+    )}`;
 
 
   ctx.strokeText(
@@ -657,7 +767,9 @@ function updateNameplate(
       true;
 
 
-  if (oldMap) {
+  if (
+    oldMap
+  ) {
 
     oldMap.dispose();
   }
@@ -681,13 +793,6 @@ function createPlayerObject(
     playerName;
 
 
-  /*
-    Temporary colors:
-
-    Cheng = blue
-    Lu = pale white
-  */
-
   const color =
 
     player.character ===
@@ -700,12 +805,15 @@ function createPlayerObject(
 
         ? 0xe6e6e6
 
-        : 0xcccccc;
+        : player.character ===
+            'qiao_ling'
+
+          ? 0xff6f91
+
+          : 0xcccccc;
 
 
-  // -----------------------------------------------------
   // BODY
-  // -----------------------------------------------------
 
   const body =
     new THREE.Mesh(
@@ -738,9 +846,7 @@ function createPlayerObject(
     0.9;
 
 
-  // -----------------------------------------------------
   // FACING POINTER
-  // -----------------------------------------------------
 
   const pointer =
     new THREE.Mesh(
@@ -770,9 +876,7 @@ function createPlayerObject(
   );
 
 
-  // -----------------------------------------------------
-  // CHENG PUNCH ARM
-  // -----------------------------------------------------
+  // RIGHT ARM
 
   const rightArm =
     new THREE.Group();
@@ -821,9 +925,94 @@ function createPlayerObject(
   );
 
 
-  // -----------------------------------------------------
-  // NAME + HP
-  // -----------------------------------------------------
+  // RIGHT LEG
+
+  const rightLeg =
+    new THREE.Group();
+
+
+  rightLeg.position.set(
+    0.22,
+    0.75,
+    0
+  );
+
+
+  const legMesh =
+    new THREE.Mesh(
+
+      new THREE.BoxGeometry(
+        0.30,
+        1.0,
+        0.30
+      ),
+
+      new THREE.MeshStandardMaterial({
+
+        color,
+
+        transparent:
+          isLocalPlayer,
+
+        opacity:
+          isLocalPlayer
+            ? 0.8
+            : 1,
+
+        depthWrite:
+          !isLocalPlayer
+      })
+    );
+
+
+  legMesh.position.y =
+    -0.42;
+
+
+  rightLeg.add(
+    legMesh
+  );
+
+
+  // QIAO MOBILITY AURA
+
+  const mobilityAura =
+    new THREE.Mesh(
+
+      new THREE.TorusGeometry(
+        0.82,
+        0.05,
+        6,
+        28
+      ),
+
+      new THREE.MeshBasicMaterial({
+
+        color:
+          0xff6f91,
+
+        transparent:
+          true,
+
+        opacity:
+          0,
+
+        depthWrite:
+          false
+      })
+    );
+
+
+  mobilityAura.rotation.x =
+    Math.PI /
+    2;
+
+
+  mobilityAura.position.y =
+    0.08;
+
+
+  // NAMEPLATE
 
   const nameplateMaterial =
     new THREE.SpriteMaterial({
@@ -865,9 +1054,7 @@ function createPlayerObject(
     999;
 
 
-  // -----------------------------------------------------
   // STRENGTHEN AURA
-  // -----------------------------------------------------
 
   const aura =
     new THREE.Mesh(
@@ -902,9 +1089,7 @@ function createPlayerObject(
     0.08;
 
 
-  // -----------------------------------------------------
-  // LU GUANG SHIELD
-  // -----------------------------------------------------
+  // LU SHIELD
 
   const shield =
     new THREE.Mesh(
@@ -939,10 +1124,6 @@ function createPlayerObject(
     1.0;
 
 
-  // -----------------------------------------------------
-  // ADD EVERYTHING
-  // -----------------------------------------------------
-
   container.add(
     body
   );
@@ -955,6 +1136,16 @@ function createPlayerObject(
 
   container.add(
     rightArm
+  );
+
+
+  container.add(
+    rightLeg
+  );
+
+
+  container.add(
+    mobilityAura
   );
 
 
@@ -981,6 +1172,10 @@ function createPlayerObject(
 
     rightArm,
 
+    rightLeg,
+
+    mobilityAura,
+
     nameplate,
 
     aura,
@@ -988,6 +1183,9 @@ function createPlayerObject(
     shield,
 
     strengthenUntil:
+      0,
+
+    mobilityUntil:
       0,
 
     playerData: {
@@ -1064,9 +1262,7 @@ function initArena(
   );
 
 
-  // -----------------------------------------------------
   // FLOOR
-  // -----------------------------------------------------
 
   const floor =
     new THREE.Mesh(
@@ -1139,9 +1335,9 @@ function initArena(
   );
 
 
-  // -----------------------------------------------------
+  // ===================================================
   // KEY DOWN
-  // -----------------------------------------------------
+  // ===================================================
 
   window.addEventListener(
     'keydown',
@@ -1156,11 +1352,11 @@ function initArena(
         true;
 
 
-      // -----------------------------------------------
       // SPECTATOR
-      // -----------------------------------------------
 
-      if (isSpectator) {
+      if (
+        isSpectator
+      ) {
 
         if (
           event.key ===
@@ -1192,9 +1388,7 @@ function initArena(
       }
 
 
-      // -----------------------------------------------
-      // SPACE — BASIC
-      // -----------------------------------------------
+      // SPACE
 
       if (
         event.code ===
@@ -1208,9 +1402,7 @@ function initArena(
       }
 
 
-      // -----------------------------------------------
-      // Q — ABILITY
-      // -----------------------------------------------
+      // Q
 
       if (
         key ===
@@ -1221,9 +1413,7 @@ function initArena(
       }
 
 
-      // -----------------------------------------------
-      // E — ULT
-      // -----------------------------------------------
+      // E
 
       if (
         key ===
@@ -1234,9 +1424,7 @@ function initArena(
       }
 
 
-      // -----------------------------------------------
-      // SHIFT — POINTER LOCK
-      // -----------------------------------------------
+      // SHIFT
 
       if (
         event.key ===
@@ -1260,9 +1448,9 @@ function initArena(
   );
 
 
-  // -----------------------------------------------------
+  // ===================================================
   // KEY UP
-  // -----------------------------------------------------
+  // ===================================================
 
   window.addEventListener(
     'keyup',
@@ -1277,9 +1465,9 @@ function initArena(
   );
 
 
-  // -----------------------------------------------------
+  // ===================================================
   // POINTER LOCK
-  // -----------------------------------------------------
+  // ===================================================
 
   document.addEventListener(
     'pointerlockchange',
@@ -1293,9 +1481,9 @@ function initArena(
   );
 
 
-  // -----------------------------------------------------
-  // MOUSE CAMERA
-  // -----------------------------------------------------
+  // ===================================================
+  // MOUSE / SHIFT-LOCK CAMERA
+  // ===================================================
 
   document.addEventListener(
     'mousemove',
@@ -1312,27 +1500,54 @@ function initArena(
       }
 
 
+      /*
+        Horizontal mouse movement ALWAYS works.
+
+        This includes Qiao's DAMAGE.
+
+        So during the ult you can still turn
+        around exactly like normal Shift-lock.
+      */
+
       yaw -=
         event.movementX *
         0.003;
 
 
-      pitch =
-        Math.max(
+      /*
+        Normally:
+        mouse Y changes pitch.
 
-          -Math.PI /
-          4,
+        During Qiao DAMAGE:
+        vertical mouse input is simply ignored.
 
-          Math.min(
+        We do NOT overwrite `pitch`.
 
-            Math.PI /
-            6,
+        Therefore whatever angle you had before
+        the ult is preserved and restored after.
+      */
 
-            pitch -
-            event.movementY *
-            0.003
-          )
-        );
+      if (
+        !qiaoUltCameraActive
+      ) {
+
+        pitch =
+          Math.max(
+
+            -Math.PI /
+            3,
+
+            Math.min(
+
+              Math.PI /
+              6,
+
+              pitch -
+              event.movementY *
+              0.003
+            )
+          );
+      }
 
 
       localPlayerContainer
@@ -1343,9 +1558,9 @@ function initArena(
   );
 
 
-  // -----------------------------------------------------
+  // ===================================================
   // RESIZE
-  // -----------------------------------------------------
+  // ===================================================
 
   window.addEventListener(
     'resize',
@@ -1377,9 +1592,9 @@ function initArena(
   );
 
 
-  // -----------------------------------------------------
+  // ===================================================
   // ANIMATION LOOP
-  // -----------------------------------------------------
+  // ===================================================
 
   if (
     !animationStarted
@@ -1399,7 +1614,7 @@ function initArena(
 
 
 // =====================================================
-// REMOVE ARENA PLAYERS
+// CLEAR ARENA PLAYERS
 // =====================================================
 
 function clearArenaPlayers() {
@@ -1434,7 +1649,9 @@ function clearArenaPlayers() {
     .forEach(
       id => {
 
-        if (scene) {
+        if (
+          scene
+        ) {
 
           scene.remove(
             remotePlayers[
@@ -1463,6 +1680,91 @@ function clearArenaPlayers() {
         );
       }
     );
+
+
+  Object
+    .keys(
+      qiaoDamageVisuals
+    )
+    .forEach(
+      playerId => {
+
+        const visual =
+          qiaoDamageVisuals[
+            playerId
+          ];
+
+
+        if (
+          scene &&
+          visual.circle
+        ) {
+
+          scene.remove(
+            visual.circle
+          );
+        }
+
+
+        if (
+          visual.circle
+        ) {
+
+          visual
+            .circle
+            .geometry
+            .dispose();
+
+
+          visual
+            .circle
+            .material
+            .dispose();
+        }
+
+
+        delete qiaoDamageVisuals[
+          playerId
+        ];
+      }
+    );
+
+
+  while (
+    qiaoImpactAnimations.length
+  ) {
+
+    const animation =
+      qiaoImpactAnimations.pop();
+
+
+    if (
+      scene &&
+      animation.mesh
+    ) {
+
+      scene.remove(
+        animation.mesh
+      );
+    }
+
+
+    if (
+      animation.mesh
+    ) {
+
+      animation
+        .mesh
+        .geometry
+        .dispose();
+
+
+      animation
+        .mesh
+        .material
+        .dispose();
+    }
+  }
 }
 
 
@@ -1474,7 +1776,9 @@ function syncArenaPlayers(
   players
 ) {
 
-  if (!scene) {
+  if (
+    !scene
+  ) {
 
     return;
   }
@@ -1559,7 +1863,7 @@ function syncArenaPlayers(
 
 
 // =====================================================
-// FIND RENDERED PLAYER
+// GET RENDERED PLAYER
 // =====================================================
 
 function getRenderedPlayer(
@@ -1576,7 +1880,9 @@ function getRenderedPlayer(
 
 
   return (
-    remotePlayers[id] ||
+    remotePlayers[
+      id
+    ] ||
     null
   );
 }
@@ -1602,10 +1908,6 @@ function tryBasicAttack() {
 }
 
 
-// =====================================================
-// Q
-// =====================================================
-
 function tryAbility() {
 
   if (
@@ -1616,28 +1918,11 @@ function tryAbility() {
   }
 
 
-  /*
-    The event name is still
-    combat_control_input because
-    the server already uses that
-    as the generic Q input.
-
-    Cheng:
-      Q = Control
-
-    Lu:
-      Q = Shield
-  */
-
   socket.emit(
     'combat_control_input'
   );
 }
 
-
-// =====================================================
-// E
-// =====================================================
 
 function tryUlt() {
 
@@ -1648,14 +1933,6 @@ function tryUlt() {
     return;
   }
 
-
-  /*
-    Existing server event is
-    kept unchanged.
-
-    Both current characters use
-    Strengthen as E anyway.
-  */
 
   socket.emit(
     'combat_strengthen_input'
@@ -1671,24 +1948,12 @@ function canLocalAct() {
 
   if (
     currentMode !==
-      'pvp'
+    'pvp'
   ) {
 
     return false;
   }
 
-
-  /*
-    IMPORTANT:
-
-    We DO NOT check for Cheng here anymore.
-
-    Any selected/implemented character
-    may send Space/Q/E.
-
-    The server determines what those
-    inputs mean.
-  */
 
   if (
     !selectedCharacter
@@ -1708,9 +1973,22 @@ function canLocalAct() {
   }
 
 
+  const now =
+    Date.now();
+
+
   if (
-    Date.now() <
+    now <
     selfCombat.stunnedUntil
+  ) {
+
+    return false;
+  }
+
+
+  if (
+    now <
+    selfCombat.actionLockedUntil
   ) {
 
     return false;
@@ -1731,9 +2009,7 @@ function getLocalMovementMultiplier() {
     Date.now();
 
 
-  // -----------------------------------------------------
   // CHENG
-  // -----------------------------------------------------
 
   if (
     selectedCharacter ===
@@ -1744,11 +2020,6 @@ function getLocalMovementMultiplier() {
       1;
 
 
-    /*
-      Successful Control hit:
-      +50%
-    */
-
     if (
       now <
       selfCombat.speedBuffUntil
@@ -1758,11 +2029,6 @@ function getLocalMovementMultiplier() {
         0.50;
     }
 
-
-    /*
-      Strengthen:
-      +15%
-    */
 
     if (
       now <
@@ -1778,9 +2044,7 @@ function getLocalMovementMultiplier() {
   }
 
 
-  // -----------------------------------------------------
-  // LU GUANG
-  // -----------------------------------------------------
+  // LU
 
   if (
     selectedCharacter ===
@@ -1790,11 +2054,6 @@ function getLocalMovementMultiplier() {
     let multiplier =
       1;
 
-
-    /*
-      Strengthen:
-      +20%
-    */
 
     if (
       now <
@@ -1810,12 +2069,37 @@ function getLocalMovementMultiplier() {
   }
 
 
+  // QIAO
+
+  if (
+    selectedCharacter ===
+      'qiao_ling'
+  ) {
+
+    if (
+      now <
+      selfCombat.mobilityUntil
+    ) {
+
+      /*
+        Normal speed = 9.
+        Mobility speed = 70.
+      */
+
+      return 70 / 9;
+    }
+
+
+    return 1;
+  }
+
+
   return 1;
 }
 
 
 // =====================================================
-// CHENG PUNCH ANIMATION
+// CHENG PUNCH
 // =====================================================
 
 function animatePunch(
@@ -1834,10 +2118,6 @@ function animatePunch(
   };
 }
 
-
-// =====================================================
-// UPDATE PUNCH
-// =====================================================
 
 function updatePunchAnimations(
   now
@@ -1859,7 +2139,9 @@ function updatePunchAnimations(
           );
 
 
-        if (!rendered) {
+        if (
+          !rendered
+        ) {
 
           delete punchAnimations[
             playerId
@@ -1938,6 +2220,936 @@ function updatePunchAnimations(
 
 
 // =====================================================
+// QIAO BOXING
+// =====================================================
+
+function animateQiaoBoxing(
+  playerId,
+  phase
+) {
+
+  qiaoBoxingAnimations[
+    playerId
+  ] = {
+
+    phase,
+
+    startedAt:
+      performance.now(),
+
+    duration:
+      phase ===
+        'fist'
+
+        ? 120
+
+        : 170
+  };
+}
+
+
+function updateQiaoBoxingAnimations(
+  now
+) {
+
+  Object
+    .entries(
+      qiaoBoxingAnimations
+    )
+    .forEach(
+      ([
+        playerId,
+        animation
+      ]) => {
+
+        const rendered =
+          getRenderedPlayer(
+            playerId
+          );
+
+
+        if (
+          !rendered
+        ) {
+
+          delete qiaoBoxingAnimations[
+            playerId
+          ];
+
+
+          return;
+        }
+
+
+        const t =
+          Math.min(
+
+            1,
+
+            (
+              now -
+              animation.startedAt
+            ) /
+            animation.duration
+          );
+
+
+        const motion =
+          Math.sin(
+            t *
+            Math.PI
+          );
+
+
+        if (
+          animation.phase ===
+          'fist'
+        ) {
+
+          rendered
+            .rightArm
+            .position
+            .z =
+
+              -0.15 -
+              motion *
+              1.45;
+
+
+          rendered
+            .rightArm
+            .rotation
+            .x =
+
+              -motion *
+              0.25;
+
+        } else {
+
+          /*
+            LEG SWEEP
+          */
+
+          rendered
+            .rightLeg
+            .rotation
+            .y =
+
+              motion *
+              Math.PI *
+              0.95;
+
+
+          rendered
+            .rightLeg
+            .rotation
+            .x =
+
+              -motion *
+              0.55;
+
+
+          rendered
+            .body
+            .rotation
+            .y =
+
+              -motion *
+              0.22;
+        }
+
+
+        if (
+          t >=
+          1
+        ) {
+
+          rendered
+            .rightArm
+            .position
+            .z =
+              -0.15;
+
+
+          rendered
+            .rightArm
+            .rotation
+            .x =
+              0;
+
+
+          rendered
+            .rightLeg
+            .rotation
+            .x =
+              0;
+
+
+          rendered
+            .rightLeg
+            .rotation
+            .y =
+              0;
+
+
+          rendered
+            .body
+            .rotation
+            .y =
+              0;
+
+
+          delete qiaoBoxingAnimations[
+            playerId
+          ];
+        }
+      }
+    );
+}
+
+
+// =====================================================
+// QIAO MOBILITY VISUAL
+// =====================================================
+
+function updateQiaoMobilityVisuals() {
+
+  const now =
+    Date.now();
+
+
+  const renderedPlayers = [
+
+    localRenderedPlayer,
+
+    ...Object.values(
+      remotePlayers
+    )
+
+  ].filter(
+    Boolean
+  );
+
+
+  renderedPlayers.forEach(
+    rendered => {
+
+      const active =
+        now <
+        (
+          rendered.mobilityUntil ||
+          0
+        );
+
+
+      rendered
+        .mobilityAura
+        .material
+        .opacity =
+
+          active
+            ? 0.72
+            : 0;
+
+
+      if (
+        active
+      ) {
+
+        rendered
+          .mobilityAura
+          .rotation
+          .z +=
+            0.28;
+
+
+        rendered
+          .body
+          .rotation
+          .x =
+            -0.22;
+
+      } else {
+
+        const damageVisual =
+          qiaoDamageVisuals[
+            rendered
+              .playerData
+              .id
+          ];
+
+
+        if (
+          !damageVisual
+        ) {
+
+          rendered
+            .body
+            .rotation
+            .x =
+              0;
+        }
+      }
+    }
+  );
+}
+
+
+// =====================================================
+// QIAO DAMAGE START VISUAL
+// =====================================================
+
+function startQiaoDamageVisual(
+  data
+) {
+
+  const rendered =
+    getRenderedPlayer(
+      data.playerId
+    );
+
+
+  if (
+    !rendered ||
+    !scene
+  ) {
+
+    return;
+  }
+
+
+  const previous =
+    qiaoDamageVisuals[
+      data.playerId
+    ];
+
+
+  if (
+    previous
+  ) {
+
+    scene.remove(
+      previous.circle
+    );
+
+
+    previous
+      .circle
+      .geometry
+      .dispose();
+
+
+    previous
+      .circle
+      .material
+      .dispose();
+  }
+
+
+  /*
+    DAMAGE radius = 5.
+  */
+
+  const radius =
+    data.radius ||
+    5;
+
+
+  /*
+    Filled red landing circle.
+  */
+
+  const circle =
+    new THREE.Mesh(
+
+      new THREE.CircleGeometry(
+        radius,
+        64
+      ),
+
+      new THREE.MeshBasicMaterial({
+
+        color:
+          0xff1818,
+
+        transparent:
+          true,
+
+        opacity:
+          0.40,
+
+        side:
+          THREE.DoubleSide,
+
+        depthWrite:
+          false
+      })
+    );
+
+
+  circle.rotation.x =
+    -Math.PI /
+    2;
+
+
+  circle.position.set(
+
+    rendered
+      .container
+      .position
+      .x,
+
+    0.03,
+
+    rendered
+      .container
+      .position
+      .z
+  );
+
+
+  circle.renderOrder =
+    20;
+
+
+  scene.add(
+    circle
+  );
+
+
+  qiaoDamageVisuals[
+    data.playerId
+  ] = {
+
+    playerId:
+      data.playerId,
+
+    rendered,
+
+    circle,
+
+    startedAt:
+      performance.now(),
+
+    /*
+      Airborne for 1 second.
+    */
+
+    duration:
+      1000,
+
+    /*
+      Height = 5.5.
+    */
+
+    height:
+      data.height ||
+      5.5,
+
+    radius
+  };
+}
+
+
+// =====================================================
+// QIAO DAMAGE LANDING
+// =====================================================
+
+function finishQiaoDamageVisual(
+  data
+) {
+
+  const visual =
+    qiaoDamageVisuals[
+      data.playerId
+    ];
+
+
+  if (
+    visual
+  ) {
+
+    visual
+      .rendered
+      .container
+      .position
+      .y =
+        0;
+
+
+    visual
+      .rendered
+      .body
+      .rotation
+      .x =
+        0;
+
+
+    if (
+      scene
+    ) {
+
+      scene.remove(
+        visual.circle
+      );
+    }
+
+
+    visual
+      .circle
+      .geometry
+      .dispose();
+
+
+    visual
+      .circle
+      .material
+      .dispose();
+
+
+    delete qiaoDamageVisuals[
+      data.playerId
+    ];
+  }
+
+
+  if (
+    !scene
+  ) {
+
+    return;
+  }
+
+
+  // LANDING SHOCKWAVE
+
+  const ring =
+    new THREE.Mesh(
+
+      new THREE.RingGeometry(
+        0.7,
+        1.1,
+        64
+      ),
+
+      new THREE.MeshBasicMaterial({
+
+        color:
+          0xff2020,
+
+        transparent:
+          true,
+
+        opacity:
+          0.85,
+
+        side:
+          THREE.DoubleSide,
+
+        depthWrite:
+          false
+      })
+    );
+
+
+  ring.rotation.x =
+    -Math.PI /
+    2;
+
+
+  ring.position.set(
+
+    data.x,
+
+    0.04,
+
+    data.z
+  );
+
+
+  ring.renderOrder =
+    21;
+
+
+  scene.add(
+    ring
+  );
+
+
+  qiaoImpactAnimations.push({
+
+    mesh:
+      ring,
+
+    startedAt:
+      performance.now(),
+
+    duration:
+      300,
+
+    maxScale:
+
+      (
+        data.radius ||
+        5
+      ) /
+      1.1
+  });
+}
+
+
+// =====================================================
+// UPDATE QIAO DAMAGE
+// =====================================================
+
+function updateQiaoDamageVisuals(
+  now
+) {
+
+  Object
+    .values(
+      qiaoDamageVisuals
+    )
+    .forEach(
+      visual => {
+
+        const rendered =
+          visual.rendered;
+
+
+        if (
+          !rendered ||
+          !rendered.container
+        ) {
+
+          return;
+        }
+
+
+        const elapsed =
+          now -
+          visual.startedAt;
+
+
+        const t =
+          Math.min(
+
+            1,
+
+            elapsed /
+            visual.duration
+          );
+
+
+        /*
+          ANIMATION:
+
+          0.00 - 0.20
+          fast smooth rise
+
+          0.20 - 0.78
+          full-height airborne movement
+
+          0.78 - 1.00
+          fast axe-kick descent
+        */
+
+        let heightFactor =
+          0;
+
+
+        if (
+          t <
+          0.20
+        ) {
+
+          const riseT =
+            t /
+            0.20;
+
+
+          heightFactor =
+            Math.sin(
+
+              riseT *
+              Math.PI /
+              2
+            );
+
+        } else if (
+          t <
+          0.78
+        ) {
+
+          heightFactor =
+            1;
+
+        } else {
+
+          const fallT =
+
+            (
+              t -
+              0.78
+            ) /
+            0.22;
+
+
+          heightFactor =
+
+            1 -
+            Math.pow(
+              fallT,
+              2.2
+            );
+
+
+          heightFactor =
+            Math.max(
+              0,
+              heightFactor
+            );
+        }
+
+
+        rendered
+          .container
+          .position
+          .y =
+
+            visual.height *
+            heightFactor;
+
+
+        /*
+          Body animation.
+        */
+
+        if (
+          t <
+          0.78
+        ) {
+
+          rendered
+            .body
+            .rotation
+            .x =
+              -0.10;
+
+        } else {
+
+          const diveT =
+
+            (
+              t -
+              0.78
+            ) /
+            0.22;
+
+
+          rendered
+            .body
+            .rotation
+            .x =
+
+              -0.10 -
+              diveT *
+              0.90;
+        }
+
+
+        /*
+          Circle follows Qiao's CURRENT
+          X and Z location.
+        */
+
+        visual
+          .circle
+          .position
+          .x =
+
+            rendered
+              .container
+              .position
+              .x;
+
+
+        visual
+          .circle
+          .position
+          .z =
+
+            rendered
+              .container
+              .position
+              .z;
+
+
+        /*
+          Circle ALWAYS stays on floor.
+        */
+
+        visual
+          .circle
+          .position
+          .y =
+            0.03;
+
+
+        /*
+          Warning pulse.
+        */
+
+        const opacityPulse =
+
+          0.36 +
+          Math.sin(
+            elapsed *
+            0.025
+          ) *
+          0.08;
+
+
+        visual
+          .circle
+          .material
+          .opacity =
+            opacityPulse;
+
+
+        /*
+          Small visual breathing pulse.
+
+          Actual damage radius remains
+          exactly 5 on server.
+        */
+
+        const scalePulse =
+
+          1 +
+          Math.sin(
+            elapsed *
+            0.018
+          ) *
+          0.025;
+
+
+        visual
+          .circle
+          .scale
+          .set(
+
+            scalePulse,
+
+            scalePulse,
+
+            scalePulse
+          );
+      }
+    );
+
+
+  // LANDING IMPACT RINGS
+
+  for (
+    let index =
+      qiaoImpactAnimations.length -
+      1;
+
+    index >=
+      0;
+
+    index -=
+      1
+  ) {
+
+    const animation =
+      qiaoImpactAnimations[
+        index
+      ];
+
+
+    const t =
+      Math.min(
+
+        1,
+
+        (
+          now -
+          animation.startedAt
+        ) /
+        animation.duration
+      );
+
+
+    const scale =
+
+      1 +
+
+      (
+        animation.maxScale -
+        1
+      ) *
+      t;
+
+
+    animation
+      .mesh
+      .scale
+      .set(
+
+        scale,
+
+        scale,
+
+        scale
+      );
+
+
+    animation
+      .mesh
+      .material
+      .opacity =
+
+        0.85 *
+        (
+          1 -
+          t
+        );
+
+
+    if (
+      t >=
+      1
+    ) {
+
+      scene.remove(
+        animation.mesh
+      );
+
+
+      animation
+        .mesh
+        .geometry
+        .dispose();
+
+
+      animation
+        .mesh
+        .material
+        .dispose();
+
+
+      qiaoImpactAnimations.splice(
+        index,
+        1
+      );
+    }
+  }
+}
+
+
+// =====================================================
 // PROJECTILE VISUAL
 // =====================================================
 
@@ -1950,19 +3162,12 @@ function spawnProjectile(
   let material;
 
 
-  // -----------------------------------------------------
-  // LU GUANG LASER
-  // -----------------------------------------------------
+  // LU LASER
 
   if (
     data.kind ===
       'lu_laser'
   ) {
-
-    /*
-      Long narrow beam.
-      Box points along its Z axis.
-    */
 
     geometry =
       new THREE.BoxGeometry(
@@ -1989,9 +3194,7 @@ function spawnProjectile(
 
   } else {
 
-    // ---------------------------------------------------
     // CHENG CONTROL
-    // ---------------------------------------------------
 
     geometry =
       new THREE.SphereGeometry(
@@ -2023,11 +3226,6 @@ function spawnProjectile(
     data.z
   );
 
-
-  /*
-    Make Lu's beam visually point
-    in the direction it is flying.
-  */
 
   if (
     data.kind ===
@@ -2102,13 +3300,17 @@ function removeProjectile(
     ];
 
 
-  if (!projectile) {
+  if (
+    !projectile
+  ) {
 
     return;
   }
 
 
-  if (scene) {
+  if (
+    scene
+  ) {
 
     scene.remove(
       projectile.mesh
@@ -2153,9 +3355,7 @@ function updateProjectiles(
     .forEach(
       projectile => {
 
-        // ------------------------------------------------
-        // HOMING LU GUANG STRENGTHEN LASER
-        // ------------------------------------------------
+        // LU STRENGTHENED HOMING LASER
 
         if (
           projectile.kind ===
@@ -2170,7 +3370,9 @@ function updateProjectiles(
             );
 
 
-          if (!target) {
+          if (
+            !target
+          ) {
 
             return;
           }
@@ -2258,10 +3460,6 @@ function updateProjectiles(
               dt;
 
 
-            /*
-              Don't visually overshoot.
-            */
-
             const amount =
               Math.min(
                 movement,
@@ -2300,17 +3498,7 @@ function updateProjectiles(
         }
 
 
-        // ------------------------------------------------
         // NORMAL STRAIGHT PROJECTILE
-        // ------------------------------------------------
-
-        /*
-          spawnedAt comes from server.
-
-          If packet arrives a little late,
-          immediately render farther along
-          its path.
-        */
 
         const elapsed =
           Math.max(
@@ -2373,10 +3561,6 @@ function updateProjectiles(
 
         } else {
 
-          /*
-            Cheng Control orb spin.
-          */
-
           projectile
             .mesh
             .rotation
@@ -2413,7 +3597,9 @@ function updateStrengthenVisuals() {
       remotePlayers
     )
 
-  ].filter(Boolean);
+  ].filter(
+    Boolean
+  );
 
 
   renderedPlayers.forEach(
@@ -2440,7 +3626,9 @@ function updateStrengthenVisuals() {
             : 0;
 
 
-      if (active) {
+      if (
+        active
+      ) {
 
         rendered
           .aura
@@ -2471,7 +3659,9 @@ function updateShieldVisuals() {
       remotePlayers
     )
 
-  ].filter(Boolean);
+  ].filter(
+    Boolean
+  );
 
 
   renderedPlayers.forEach(
@@ -2494,10 +3684,10 @@ function updateShieldVisuals() {
       const active =
 
         shieldHp >
-          0 &&
+        0 &&
 
         now <
-          shieldUntil;
+        shieldUntil;
 
 
       rendered
@@ -2510,7 +3700,9 @@ function updateShieldVisuals() {
             : 0;
 
 
-      if (active) {
+      if (
+        active
+      ) {
 
         rendered
           .shield
@@ -2531,7 +3723,7 @@ function updateShieldVisuals() {
 
 
 // =====================================================
-// DEATH ANIMATION
+// DEATH
 // =====================================================
 
 function animateDeath(
@@ -2544,7 +3736,9 @@ function animateDeath(
     );
 
 
-  if (!rendered) {
+  if (
+    !rendered
+  ) {
 
     return;
   }
@@ -2564,10 +3758,6 @@ function animateDeath(
   };
 }
 
-
-// =====================================================
-// UPDATE DEATH
-// =====================================================
 
 function updateDeathAnimations(
   now
@@ -2596,10 +3786,6 @@ function updateDeathAnimations(
           );
 
 
-        // ------------------------------------------------
-        // TIP OVER
-        // ------------------------------------------------
-
         animation
           .rendered
           .container
@@ -2610,10 +3796,6 @@ function updateDeathAnimations(
             Math.PI /
             2;
 
-
-        // ------------------------------------------------
-        // SHRINK
-        // ------------------------------------------------
 
         const scale =
           Math.max(
@@ -2648,7 +3830,9 @@ function updateDeathAnimations(
           1
         ) {
 
-          if (scene) {
+          if (
+            scene
+          ) {
 
             scene.remove(
               animation
@@ -2746,9 +3930,7 @@ function updateCooldownHud() {
     );
 
 
-  // -----------------------------------------------------
-  // STUN HAS PRIORITY
-  // -----------------------------------------------------
+  // STUN FIRST
 
   if (
     now <
@@ -2766,9 +3948,7 @@ function updateCooldownHud() {
   }
 
 
-  // -----------------------------------------------------
   // CHENG
-  // -----------------------------------------------------
 
   if (
     selectedCharacter ===
@@ -2786,7 +3966,6 @@ function updateCooldownHud() {
           now
         )}`;
 
-
     } else if (
       now <
       selfCombat.speedBuffUntil
@@ -2797,7 +3976,6 @@ function updateCooldownHud() {
           selfCombat.speedBuffUntil -
           now
         )}`;
-
 
     } else {
 
@@ -2810,9 +3988,7 @@ function updateCooldownHud() {
   }
 
 
-  // -----------------------------------------------------
-  // LU GUANG
-  // -----------------------------------------------------
+  // LU
 
   if (
     selectedCharacter ===
@@ -2830,12 +4006,11 @@ function updateCooldownHud() {
           now
         )}`;
 
-
     } else if (
       selfCombat.shieldHp >
-        0 &&
+      0 &&
       now <
-        selfCombat.shieldUntil
+      selfCombat.shieldUntil
     ) {
 
       status.innerText =
@@ -2848,6 +4023,45 @@ function updateCooldownHud() {
           now
         )}`;
 
+    } else {
+
+      status.innerText =
+        '';
+    }
+
+
+    return;
+  }
+
+
+  // QIAO
+
+  if (
+    selectedCharacter ===
+      'qiao_ling'
+  ) {
+
+    if (
+      now <
+      selfCombat.airborneUntil
+    ) {
+
+      status.innerText =
+        `DAMAGE AIRBORNE ${formatSeconds(
+          selfCombat.airborneUntil -
+          now
+        )}`;
+
+    } else if (
+      now <
+      selfCombat.mobilityUntil
+    ) {
+
+      status.innerText =
+        `MOBILITY ${formatSeconds(
+          selfCombat.mobilityUntil -
+          now
+        )}`;
 
     } else {
 
@@ -2909,13 +4123,15 @@ function formatSeconds(
     (
       milliseconds /
       1000
-    ).toFixed(1)
+    ).toFixed(
+      1
+    )
   }s`;
 }
 
 
 // =====================================================
-// SMOOTH REMOTE MOVEMENT
+// REMOTE MOVEMENT
 // =====================================================
 
 function updateRemoteInterpolation(
@@ -2929,20 +4145,60 @@ function updateRemoteInterpolation(
     .forEach(
       rendered => {
 
+        /*
+          IMPORTANT:
+
+          Interpolate X/Z only.
+
+          Qiao DAMAGE animation controls Y.
+        */
+
         rendered
           .container
           .position
-          .lerp(
+          .x =
 
-            rendered
-              .targetPosition,
+            THREE.MathUtils.lerp(
 
-            Math.min(
-              1,
-              dt *
-              18
-            )
-          );
+              rendered
+                .container
+                .position
+                .x,
+
+              rendered
+                .targetPosition
+                .x,
+
+              Math.min(
+                1,
+                dt *
+                18
+              )
+            );
+
+
+        rendered
+          .container
+          .position
+          .z =
+
+            THREE.MathUtils.lerp(
+
+              rendered
+                .container
+                .position
+                .z,
+
+              rendered
+                .targetPosition
+                .z,
+
+              Math.min(
+                1,
+                dt *
+                18
+              )
+            );
 
 
         const current =
@@ -2984,6 +4240,361 @@ function updateRemoteInterpolation(
             );
       }
     );
+}
+
+
+// =====================================================
+// UPDATE QIAO CAMERA BLEND
+// =====================================================
+
+function updateQiaoUltCameraBlend(
+  dt
+) {
+
+  /*
+    Fast and smooth.
+
+    We are NOT changing cameras.
+
+    We are simply changing where the SAME
+    camera wants to sit.
+  */
+
+  const targetBlend =
+    qiaoUltCameraActive
+      ? 1
+      : 0;
+
+
+  /*
+    16 makes the transition quick enough
+    for a 1-second ult without snapping.
+  */
+
+  const transitionAmount =
+    Math.min(
+      1,
+      dt *
+      16
+    );
+
+
+  qiaoUltCameraBlend =
+    THREE.MathUtils.lerp(
+
+      qiaoUltCameraBlend,
+
+      targetBlend,
+
+      transitionAmount
+    );
+
+
+  if (
+    qiaoUltCameraBlend >
+    0.998
+  ) {
+
+    qiaoUltCameraBlend =
+      1;
+  }
+
+
+  if (
+    qiaoUltCameraBlend <
+    0.002
+  ) {
+
+    qiaoUltCameraBlend =
+      0;
+  }
+}
+
+
+// =====================================================
+// UPDATE NORMAL + QIAO SHIFT-LOCK CAMERA
+// =====================================================
+
+function updatePlayerCamera(
+  dt
+) {
+
+  if (
+    !localPlayerContainer ||
+    !camera
+  ) {
+
+    return;
+  }
+
+
+  updateQiaoUltCameraBlend(
+    dt
+  );
+
+
+  /*
+    =====================================================
+    NORMAL SHIFT-LOCK CAMERA
+    =====================================================
+
+    This preserves your original camera
+    behavior outside Qiao's ult.
+  */
+
+  const normalCameraOffset =
+    new THREE.Vector3(
+
+      0,
+
+      2.5 +
+      pitch *
+      3,
+
+      5
+    );
+
+
+  normalCameraOffset
+    .applyAxisAngle(
+
+      new THREE.Vector3(
+        0,
+        1,
+        0
+      ),
+
+      yaw
+    );
+
+
+  const normalCameraPosition =
+    localPlayerContainer
+      .position
+      .clone()
+      .add(
+        normalCameraOffset
+      );
+
+
+  const normalLookTarget =
+    localPlayerContainer
+      .position
+      .clone()
+      .add(
+
+        new THREE.Vector3(
+          0,
+          1.2,
+          0
+        )
+      );
+
+
+  /*
+    =====================================================
+    QIAO DAMAGE SHIFT-LOCK CAMERA
+    =====================================================
+
+    SAME camera.
+
+    SAME yaw.
+
+    SAME player follow.
+
+    The only differences are:
+
+    - camera moves much higher
+    - camera moves slightly farther back
+    - camera aims almost straight down
+    - vertical mouse movement is locked
+  */
+
+
+  /*
+    Horizontal distance behind Qiao.
+
+    Keeping SOME distance behind her instead
+    of exactly above her means horizontal yaw
+    is still visually meaningful.
+
+    You can rotate around her during the ult
+    exactly like Shift-lock.
+  */
+
+  const ultBackDistance =
+    2.2;
+
+
+  /*
+    Direction behind the character based
+    on the SAME normal yaw.
+  */
+
+  const ultBackwardOffset =
+    new THREE.Vector3(
+
+      Math.sin(
+        yaw
+      ) *
+      ultBackDistance,
+
+      0,
+
+      Math.cos(
+        yaw
+      ) *
+      ultBackDistance
+    );
+
+
+  /*
+    Qiao itself rises to 5.5 units.
+
+    This camera position is relative to her
+    current position, so it follows her
+    smoothly while she is moving in air.
+  */
+
+  const ultCameraPosition =
+    localPlayerContainer
+      .position
+      .clone()
+      .add(
+
+        new THREE.Vector3(
+          0,
+          8.5,
+          0
+        )
+      )
+      .add(
+        ultBackwardOffset
+      );
+
+
+  /*
+    Aim at the FLOOR below Qiao.
+
+    This is why the radius-5 red circle is
+    clearly visible while choosing landing.
+
+    Since the camera retains that 2.2-unit
+    horizontal offset, it is nearly vertical
+    but does not become an unnatural perfectly
+    fixed 90-degree security-camera view.
+  */
+
+  const ultLookTarget =
+    new THREE.Vector3(
+
+      localPlayerContainer
+        .position
+        .x,
+
+      0,
+
+      localPlayerContainer
+        .position
+        .z
+    );
+
+
+  /*
+    =====================================================
+    BLEND THE SAME CAMERA BETWEEN THE TWO POSITIONS
+    =====================================================
+
+    There is never a camera switch.
+
+    We calculate where the normal Shift-lock
+    camera wants to be and where the temporary
+    Qiao Shift-lock position wants to be, then
+    smoothly move the SAME camera between them.
+  */
+
+  const desiredCameraPosition =
+    normalCameraPosition
+      .clone()
+      .lerp(
+
+        ultCameraPosition,
+
+        qiaoUltCameraBlend
+      );
+
+
+  const desiredLookTarget =
+    normalLookTarget
+      .clone()
+      .lerp(
+
+        ultLookTarget,
+
+        qiaoUltCameraBlend
+      );
+
+
+  /*
+    Extra physical smoothing of the camera.
+
+    This prevents even the desired-position
+    transition itself from looking jerky.
+  */
+
+  const cameraFollowAmount =
+    Math.min(
+      1,
+      dt *
+      20
+    );
+
+
+  camera
+    .position
+    .lerp(
+
+      desiredCameraPosition,
+
+      cameraFollowAmount
+    );
+
+
+  /*
+    Store a persistent look target so the
+    camera rotation is also interpolated
+    instead of abruptly calling lookAt()
+    on a completely different point.
+  */
+
+  if (
+    !camera.userData
+      .smoothLookTarget
+  ) {
+
+    camera.userData
+      .smoothLookTarget =
+        normalLookTarget.clone();
+  }
+
+
+  camera
+    .userData
+    .smoothLookTarget
+    .lerp(
+
+      desiredLookTarget,
+
+      cameraFollowAmount
+    );
+
+
+  camera.lookAt(
+
+    camera
+      .userData
+      .smoothLookTarget
+  );
 }
 
 
@@ -3033,7 +4644,14 @@ function animateArena(
     now;
 
 
+  // ANIMATIONS
+
   updatePunchAnimations(
+    now
+  );
+
+
+  updateQiaoBoxingAnimations(
     now
   );
 
@@ -3054,17 +4672,34 @@ function animateArena(
   updateShieldVisuals();
 
 
-  updateCooldownHud();
+  updateQiaoMobilityVisuals();
 
+
+  /*
+    Remote movement first.
+  */
 
   updateRemoteInterpolation(
     dt
   );
 
 
-  // -----------------------------------------------------
+  /*
+    Then Qiao Y animation so interpolation
+    cannot force her back onto the floor.
+  */
+
+  updateQiaoDamageVisuals(
+    now
+  );
+
+
+  updateCooldownHud();
+
+
+  // ===================================================
   // SPECTATOR
-  // -----------------------------------------------------
+  // ===================================================
 
   if (
     isSpectator
@@ -3098,9 +4733,22 @@ function animateArena(
   }
 
 
+  // ===================================================
+  // MOVEMENT
+  // ===================================================
+
+  const nowMs =
+    Date.now();
+
+
   const stunned =
-    Date.now() <
+    nowMs <
     selfCombat.stunnedUntil;
+
+
+  const basicMovementLocked =
+    nowMs <
+    selfCombat.attackLockedUntil;
 
 
   let moved =
@@ -3111,12 +4759,26 @@ function animateArena(
     new THREE.Vector3();
 
 
+  /*
+    Qiao CAN move during DAMAGE.
+
+    actionLockedUntil only prevents actions.
+
+    Movement is prevented by:
+    - stun
+    - basic attack lock
+    - match ending
+  */
+
   if (
     !stunned &&
+    !basicMovementLocked &&
     !matchEnded
   ) {
 
-    if (keys.w) {
+    if (
+      keys.w
+    ) {
 
       moveVector.z -=
         1;
@@ -3127,7 +4789,9 @@ function animateArena(
     }
 
 
-    if (keys.s) {
+    if (
+      keys.s
+    ) {
 
       moveVector.z +=
         1;
@@ -3138,7 +4802,9 @@ function animateArena(
     }
 
 
-    if (keys.a) {
+    if (
+      keys.a
+    ) {
 
       moveVector.x -=
         1;
@@ -3149,7 +4815,9 @@ function animateArena(
     }
 
 
-    if (keys.d) {
+    if (
+      keys.d
+    ) {
 
       moveVector.x +=
         1;
@@ -3161,11 +4829,9 @@ function animateArena(
   }
 
 
-  // -----------------------------------------------------
-  // LOCAL MOVEMENT
-  // -----------------------------------------------------
-
-  if (moved) {
+  if (
+    moved
+  ) {
 
     const baseSpeed =
       9;
@@ -3200,12 +4866,26 @@ function animateArena(
       );
 
 
+    /*
+      Change X/Z only.
+
+      Never add movement to Y because
+      Qiao's airborne animation owns Y.
+    */
+
     localPlayerContainer
       .position
-      .add(
-        moveVector
-      );
+      .x +=
+        moveVector.x;
 
+
+    localPlayerContainer
+      .position
+      .z +=
+        moveVector.z;
+
+
+    // ARENA LIMIT
 
     localPlayerContainer
       .position
@@ -3252,9 +4932,9 @@ function animateArena(
       yaw;
 
 
-  // -----------------------------------------------------
-  // ~30HZ NETWORK UPDATE
-  // -----------------------------------------------------
+  // ===================================================
+  // NETWORK MOVEMENT
+  // ===================================================
 
   const orientationChanged =
 
@@ -3278,7 +4958,7 @@ function animateArena(
     ) &&
     now -
     lastNetworkSend >=
-      33
+    33
   ) {
 
     socket.emit(
@@ -3316,60 +4996,12 @@ function animateArena(
   }
 
 
-  // -----------------------------------------------------
-  // CAMERA
-  // -----------------------------------------------------
+  // ===================================================
+  // SAME SMOOTH SHIFT-LOCK CAMERA
+  // ===================================================
 
-  const cameraOffset =
-    new THREE.Vector3(
-
-      0,
-
-      2.5 +
-      pitch *
-      3,
-
-      5
-    );
-
-
-  cameraOffset
-    .applyAxisAngle(
-
-      new THREE.Vector3(
-        0,
-        1,
-        0
-      ),
-
-      yaw
-    );
-
-
-  camera
-    .position
-    .copy(
-      localPlayerContainer
-        .position
-    )
-    .add(
-      cameraOffset
-    );
-
-
-  camera.lookAt(
-
-    localPlayerContainer
-      .position
-      .clone()
-      .add(
-
-        new THREE.Vector3(
-          0,
-          1.2,
-          0
-        )
-      )
+  updatePlayerCamera(
+    dt
   );
 
 
@@ -3405,10 +5037,6 @@ function livingSpectatorTargets() {
 }
 
 
-// =====================================================
-// CYCLE SPECTATOR
-// =====================================================
-
 function cycleSpectator(
   direction
 ) {
@@ -3443,10 +5071,6 @@ function cycleSpectator(
 }
 
 
-// =====================================================
-// SHOW SPECTATOR TARGET
-// =====================================================
-
 function showSpectatorTarget(
   target
 ) {
@@ -3464,10 +5088,6 @@ function showSpectatorTarget(
       }`;
 }
 
-
-// =====================================================
-// SPECTATOR CAMERA
-// =====================================================
 
 function updateSpectatorCamera() {
 
@@ -3545,20 +5165,31 @@ function updateSpectatorCamera() {
     );
 
 
+  const desiredPosition =
+    target
+      .container
+      .position
+      .clone()
+      .add(
+        cameraOffset
+      );
+
+
+  /*
+    Keep spectator camera smooth too.
+  */
+
   camera
     .position
-    .copy(
-      target
-        .container
-        .position
-    )
-    .add(
-      cameraOffset
+    .lerp(
+
+      desiredPosition,
+
+      0.22
     );
 
 
-  camera.lookAt(
-
+  const lookTarget =
     target
       .container
       .position
@@ -3570,13 +5201,17 @@ function updateSpectatorCamera() {
           1.2,
           0
         )
-      )
+      );
+
+
+  camera.lookAt(
+    lookTarget
   );
 }
 
 
 // =====================================================
-// OTHER PLAYER MOVEMENT
+// REMOTE PLAYER MOVEMENT
 // =====================================================
 
 socket.on(
@@ -3649,11 +5284,6 @@ socket.on(
         0;
 
 
-    /*
-      Also preserve combat data included
-      in publicPlayer().
-    */
-
     if (
       data.hp !==
       undefined
@@ -3722,7 +5352,7 @@ socket.on(
 
 
 // =====================================================
-// MOVEMENT CORRECTION
+// POSITION CORRECTION
 // =====================================================
 
 socket.on(
@@ -3737,16 +5367,22 @@ socket.on(
     }
 
 
+    /*
+      Preserve Y.
+
+      Qiao DAMAGE owns vertical position.
+    */
+
     localPlayerContainer
       .position
-      .set(
+      .x =
+        data.x;
 
-        data.x,
 
-        0,
-
-        data.z
-      );
+    localPlayerContainer
+      .position
+      .z =
+        data.z;
 
 
     yaw =
@@ -3762,7 +5398,7 @@ socket.on(
 
 
 // =====================================================
-// PRIVATE COMBAT STATE
+// SELF COMBAT STATE
 // =====================================================
 
 socket.on(
@@ -3776,11 +5412,6 @@ socket.on(
       ...data
     };
 
-
-    /*
-      Server is authoritative for
-      the actual selected character.
-    */
 
     if (
       data.character
@@ -3801,7 +5432,7 @@ socket.on(
 
 
 // =====================================================
-// CHENG BASIC RESET
+// BASIC RESET
 // =====================================================
 
 socket.on(
@@ -3815,20 +5446,12 @@ socket.on(
 
 
 // =====================================================
-// BASIC ATTACK ANIMATION
+// CHENG BASIC
 // =====================================================
 
 socket.on(
   'combat_basic_attack',
   data => {
-
-    /*
-      Currently this event is Cheng's
-      physical punch.
-
-      Lu's basic is represented by
-      lu_laser projectile spawns.
-    */
 
     if (
       !data.character ||
@@ -3845,19 +5468,166 @@ socket.on(
 
 
 // =====================================================
-// PROJECTILE SPAWN
+// UNIVERSAL BASIC MOVEMENT LOCK
+// =====================================================
+
+socket.on(
+  'combat_movement_locked',
+  data => {
+
+    selfCombat.attackLockedUntil =
+      Math.max(
+
+        selfCombat.attackLockedUntil ||
+        0,
+
+        data.until ||
+        0
+      );
+  }
+);
+
+
+// =====================================================
+// QIAO BOXING
+// =====================================================
+
+socket.on(
+  'combat_qiao_boxing',
+  data => {
+
+    animateQiaoBoxing(
+
+      data.playerId,
+
+      data.phase
+    );
+  }
+);
+
+
+// =====================================================
+// QIAO MOBILITY
+// =====================================================
+
+socket.on(
+  'combat_qiao_mobility',
+  data => {
+
+    const rendered =
+      getRenderedPlayer(
+        data.playerId
+      );
+
+
+    if (
+      rendered
+    ) {
+
+      rendered.mobilityUntil =
+        data.until;
+    }
+
+
+    if (
+      data.playerId ===
+      localPlayerId
+    ) {
+
+      selfCombat.mobilityUntil =
+        data.until;
+    }
+  }
+);
+
+
+// =====================================================
+// QIAO DAMAGE START
+// =====================================================
+
+socket.on(
+  'combat_qiao_damage_started',
+  data => {
+
+    startQiaoDamageVisual(
+      data
+    );
+
+
+    if (
+      data.playerId ===
+      localPlayerId
+    ) {
+
+      selfCombat.airborneUntil =
+        data.until;
+
+
+      selfCombat.actionLockedUntil =
+        data.until;
+
+
+      /*
+        The SAME Shift-lock camera now
+        smoothly transitions downward.
+
+        Mouse X remains usable.
+
+        Mouse Y becomes temporarily locked.
+      */
+
+      qiaoUltCameraActive =
+        true;
+    }
+  }
+);
+
+
+// =====================================================
+// QIAO DAMAGE IMPACT
+// =====================================================
+
+socket.on(
+  'combat_qiao_damage_impact',
+  data => {
+
+    finishQiaoDamageVisual(
+      data
+    );
+
+
+    if (
+      data.playerId ===
+      localPlayerId
+    ) {
+
+      selfCombat.airborneUntil =
+        0;
+
+
+      selfCombat.actionLockedUntil =
+        0;
+
+
+      /*
+        Same camera smoothly returns to
+        the exact normal Shift-lock view.
+      */
+
+      qiaoUltCameraActive =
+        false;
+    }
+  }
+);
+
+
+// =====================================================
+// PROJECTILE EVENTS
 // =====================================================
 
 socket.on(
   'combat_projectile_spawn',
   data => {
-
-    /*
-      Cheng throws Control with a
-      forward punching motion.
-
-      Lu does NOT punch when firing.
-    */
 
     if (
       data.kind ===
@@ -3877,10 +5647,6 @@ socket.on(
 );
 
 
-// =====================================================
-// PROJECTILE HIT
-// =====================================================
-
 socket.on(
   'combat_projectile_hit',
   data => {
@@ -3891,10 +5657,6 @@ socket.on(
   }
 );
 
-
-// =====================================================
-// PROJECTILE EXPIRED
-// =====================================================
 
 socket.on(
   'combat_projectile_expired',
@@ -3908,7 +5670,7 @@ socket.on(
 
 
 // =====================================================
-// HEALTH CHANGE
+// HEALTH
 // =====================================================
 
 socket.on(
@@ -3921,7 +5683,9 @@ socket.on(
       );
 
 
-    if (rendered) {
+    if (
+      rendered
+    ) {
 
       rendered
         .playerData
@@ -4005,7 +5769,7 @@ socket.on(
 
 
 // =====================================================
-// CHENG SPEED BUFF
+// CHENG SPEED
 // =====================================================
 
 socket.on(
@@ -4038,7 +5802,9 @@ socket.on(
       );
 
 
-    if (rendered) {
+    if (
+      rendered
+    ) {
 
       rendered.strengthenUntil =
         data.until;
@@ -4058,7 +5824,7 @@ socket.on(
 
 
 // =====================================================
-// LU GUANG SHIELD START
+// LU SHIELD START
 // =====================================================
 
 socket.on(
@@ -4071,7 +5837,9 @@ socket.on(
       );
 
 
-    if (rendered) {
+    if (
+      rendered
+    ) {
 
       rendered
         .playerData
@@ -4113,7 +5881,7 @@ socket.on(
 
 
 // =====================================================
-// LU GUANG SHIELD UPDATE / BREAK / EXPIRE
+// LU SHIELD UPDATE
 // =====================================================
 
 socket.on(
@@ -4126,7 +5894,9 @@ socket.on(
       );
 
 
-    if (rendered) {
+    if (
+      rendered
+    ) {
 
       rendered
         .playerData
@@ -4181,7 +5951,9 @@ socket.on(
       );
 
 
-    if (rendered) {
+    if (
+      rendered
+    ) {
 
       rendered
         .playerData
@@ -4201,6 +5973,16 @@ socket.on(
     ) {
 
       selfCombat.alive =
+        false;
+
+
+      /*
+        If Qiao somehow dies while the
+        camera transition is active,
+        return it cleanly.
+      */
+
+      qiaoUltCameraActive =
         false;
 
 
@@ -4242,7 +6024,7 @@ socket.on(
 
 
 // =====================================================
-// WINNER
+// MATCH END
 // =====================================================
 
 socket.on(
@@ -4272,7 +6054,7 @@ socket.on(
 
 
 // =====================================================
-// FORCE RETURN TO SQUAD
+// RETURN TO SQUAD
 // =====================================================
 
 socket.on(
@@ -4298,6 +6080,31 @@ socket.on(
 
 
     clearArenaPlayers();
+
+
+    qiaoUltCameraActive =
+      false;
+
+
+    qiaoUltCameraBlend =
+      0;
+
+
+    /*
+      Clear old smoothed camera target.
+
+      Next round creates a fresh one.
+    */
+
+    if (
+      camera &&
+      camera.userData
+    ) {
+
+      delete camera
+        .userData
+        .smoothLookTarget;
+    }
 
 
     isSpectator =
@@ -4333,7 +6140,19 @@ socket.on(
       stunnedUntil:
         0,
 
+      attackLockedUntil:
+        0,
+
+      actionLockedUntil:
+        0,
+
       speedBuffUntil:
+        0,
+
+      mobilityUntil:
+        0,
+
+      airborneUntil:
         0,
 
       strengthenUntil:
@@ -4372,7 +6191,7 @@ socket.on(
 
 
 // =====================================================
-// PLAYER DISCONNECT
+// PLAYER LEFT
 // =====================================================
 
 socket.on(
@@ -4439,6 +6258,25 @@ function leaveGame() {
 
 
   clearArenaPlayers();
+
+
+  qiaoUltCameraActive =
+    false;
+
+
+  qiaoUltCameraBlend =
+    0;
+
+
+  if (
+    camera &&
+    camera.userData
+  ) {
+
+    delete camera
+      .userData
+      .smoothLookTarget;
+  }
 
 
   socket.emit(

@@ -7,7 +7,7 @@ const bcrypt =
 
 
 // =====================================================
-// PER-CHARACTER STATS
+// CHARACTER STATS
 // =====================================================
 
 const CharacterStatsSchema =
@@ -15,47 +15,50 @@ const CharacterStatsSchema =
     {
 
       /*
-        Actual counted PvP rounds played
-        with this character.
-
-        A win is STILL only one actual
-        match here.
+        Actual counted multiplayer PVP rounds.
       */
       pvpMatches: {
-        type: Number,
-        default: 0
+        type:
+          Number,
+
+        default:
+          0
       },
 
 
-      /*
-        Actual wins with this character.
-      */
       pvpWins: {
-        type: Number,
-        default: 0
+        type:
+          Number,
+
+        default:
+          0
       },
 
 
       /*
-        Used for proficiency rank.
+        Proficiency scoring:
 
-        Loss = +1
-        Win  = +2
+        loss / normal completed match = +1
+        win = +2
       */
       proficiencyPoints: {
-        type: Number,
-        default: 0
+        type:
+          Number,
+
+        default:
+          0
       }
 
     },
     {
-      _id: false
+      _id:
+        false
     }
   );
 
 
 // =====================================================
-// PVP HISTORY ROSTER MEMBER
+// MATCH ROSTER MEMBER
 // =====================================================
 
 const PvPRosterMemberSchema =
@@ -63,25 +66,32 @@ const PvPRosterMemberSchema =
     {
 
       username: {
-        type: String,
-        required: true
+        type:
+          String,
+
+        required:
+          true
       },
 
 
       character: {
-        type: String,
-        required: true
+        type:
+          String,
+
+        required:
+          true
       }
 
     },
     {
-      _id: false
+      _id:
+        false
     }
   );
 
 
 // =====================================================
-// ONE SAVED PVP MATCH
+// PVP HISTORY
 // =====================================================
 
 const PvPMatchHistorySchema =
@@ -89,68 +99,81 @@ const PvPMatchHistorySchema =
     {
 
       matchId: {
-        type: String,
-        required: true
+        type:
+          String,
+
+        required:
+          true
       },
 
 
       playedAt: {
-        type: Date,
-        default: Date.now
+        type:
+          Date,
+
+        default:
+          Date.now
       },
 
 
-      /*
-        Character THIS USER played.
-      */
       character: {
-        type: String,
-        required: true
+        type:
+          String,
+
+        required:
+          true
       },
 
 
       won: {
-        type: Boolean,
-        default: false
+        type:
+          Boolean,
+
+        default:
+          false
       },
 
 
-      /*
-        1 for loss
-        2 for win
-      */
       proficiencyAward: {
-        type: Number,
-        required: true
+        type:
+          Number,
+
+        required:
+          true
       },
 
 
       winnerUsername: {
-        type: String,
-        required: true
+        type:
+          String,
+
+        required:
+          true
       },
 
 
       rosterSize: {
-        type: Number,
-        required: true
+        type:
+          Number,
+
+        required:
+          true
       },
 
 
-      /*
-        Snapshot of everyone in this round
-        and the character each person used.
-      */
       roster: {
         type: [
           PvPRosterMemberSchema
         ],
-        default: []
+
+        default:
+          []
       }
 
     },
     {
-      _id: false
+      _id:
+        false
     }
   );
 
@@ -164,33 +187,43 @@ const UserSchema =
 
     username: {
 
-      type: String,
+      type:
+        String,
 
-      required: true,
+      required:
+        true,
 
-      unique: true,
+      unique:
+        true,
 
-      trim: true,
+      trim:
+        true,
 
-      minlength: 3
+      minlength:
+        3
     },
 
 
     password: {
 
-      type: String,
+      type:
+        String,
 
-      required: true,
+      required:
+        true,
 
-      minlength: 6
+      minlength:
+        6
     },
 
 
     avatar: {
 
-      type: String,
+      type:
+        String,
 
-      default: ''
+      default:
+        ''
     },
 
 
@@ -225,19 +258,51 @@ const UserSchema =
       }
     ],
 
+
+    // ===================================================
+    // PROFILE MATCH COUNT
+    // ===================================================
+
+    matchesPlayed: {
+
+      type:
+        Number,
+
+      default:
+        0
+    },
+
+
+    // ===================================================
+    // 3-CHARACTER PROFILE SHOWCASE
+    // ===================================================
+
     showcasedCharacters: {
-      type: [String],
-    
-      default: [],
-    
+
+      type: [
+        String
+      ],
+
+      default:
+        [],
+
       validate: {
-        validator(value) {
+
+        validator(
+          value
+        ) {
+
           return (
-            Array.isArray(value) &&
-            value.length <= 3
+
+            Array.isArray(
+              value
+            ) &&
+
+            value.length <=
+              3
           );
         },
-    
+
         message:
           'You can showcase at most 3 characters.'
       }
@@ -245,43 +310,13 @@ const UserSchema =
 
 
     // ===================================================
-    // OVERALL MATCH COUNT
+    // CHARACTER STATS
     // ===================================================
-
-    /*
-      Counts real multiplayer PvP matches.
-
-      Solo arena testing does NOT increment this.
-    */
-    matchesPlayed: {
-
-      type: Number,
-
-      default: 0
-    },
-
-
-    // ===================================================
-    // CHARACTER PROFICIENCY
-    // ===================================================
-
-    /*
-      Map lets you add future characters without
-      having to redesign the database schema.
-
-      Example:
-
-      characterStats.get('cheng_xiaoshi')
-
-      characterStats.get('lu_guang')
-
-      Later:
-      characterStats.get('qiao_ling')
-    */
 
     characterStats: {
 
-      type: Map,
+      type:
+        Map,
 
       of:
         CharacterStatsSchema,
@@ -292,7 +327,7 @@ const UserSchema =
 
 
     // ===================================================
-    // PVP MATCH HISTORY
+    // MATCH HISTORY
     // ===================================================
 
     pvpMatchHistory: {
@@ -308,7 +343,7 @@ const UserSchema =
 
 
 // =====================================================
-// HASH PASSWORD
+// PASSWORD HASH
 // =====================================================
 
 UserSchema.pre(
@@ -333,9 +368,7 @@ UserSchema.pre(
 
     this.password =
       await bcrypt.hash(
-
         this.password,
-
         salt
       );
   }
@@ -343,7 +376,7 @@ UserSchema.pre(
 
 
 // =====================================================
-// CHECK PASSWORD
+// PASSWORD CHECK
 // =====================================================
 
 UserSchema.methods
@@ -353,9 +386,7 @@ UserSchema.methods
   ) {
 
     return await bcrypt.compare(
-
       enteredPassword,
-
       this.password
     );
   };
