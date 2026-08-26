@@ -2606,3 +2606,1361 @@ body {
 
   font-weight: 900;
 }
+
+/* =====================================================
+   CHAT SYSTEM
+===================================================== */
+
+
+/* =====================================================
+   DIRECT MESSAGE MODAL
+===================================================== */
+
+.chat-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(3, 5, 8, 0.82);
+  backdrop-filter: blur(6px);
+}
+
+
+.dm-chat-window {
+  width: min(900px, 88vw);
+  height: min(650px, 78vh);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+
+  background: rgba(18, 21, 27, 0.98);
+  border: 1px solid rgba(102, 252, 241, 0.36);
+  border-radius: 16px;
+
+  box-shadow:
+    0 24px 80px rgba(0, 0, 0, 0.55),
+    0 0 30px rgba(102, 252, 241, 0.08);
+}
+
+
+.dm-chat-header {
+  min-height: 82px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  padding: 20px 24px;
+
+  border-bottom:
+    1px solid rgba(102, 252, 241, 0.14);
+}
+
+
+.chat-title {
+  color: #66fcf1;
+
+  font-size: 20px;
+  font-weight: 900;
+
+  letter-spacing: 2px;
+}
+
+
+.chat-subtitle {
+  margin-top: 5px;
+
+  color: #7f8994;
+
+  font-size: 11px;
+  letter-spacing: 0.5px;
+}
+
+
+.chat-close-btn {
+  width: 38px;
+  height: 38px;
+
+  border: none;
+  border-radius: 50%;
+
+  background: rgba(255, 255, 255, 0.05);
+  color: #9ba3ad;
+
+  font-size: 17px;
+
+  cursor: pointer;
+
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+}
+
+
+.chat-close-btn:hover {
+  background: rgba(255, 255, 255, 0.11);
+  color: #fff;
+}
+
+
+.dm-chat-body {
+  min-height: 0;
+  flex: 1;
+
+  display: grid;
+
+  grid-template-columns:
+    235px
+    minmax(0, 1fr);
+}
+
+
+.dm-friend-column {
+  min-height: 0;
+
+  padding: 16px 12px;
+
+  display: flex;
+  flex-direction: column;
+
+  border-right:
+    1px solid rgba(102, 252, 241, 0.12);
+
+  background:
+    rgba(8, 10, 14, 0.48);
+}
+
+
+.dm-column-title {
+  padding: 0 8px 12px;
+
+  color: #7c8790;
+
+  font-size: 11px;
+  font-weight: 900;
+
+  letter-spacing: 1.5px;
+}
+
+
+.dm-friend-list {
+  min-height: 0;
+
+  flex: 1;
+
+  display: flex;
+  flex-direction: column;
+
+  gap: 7px;
+
+  overflow-y: auto;
+}
+
+
+.dm-friend-button {
+  width: 100%;
+
+  display: flex;
+  align-items: center;
+
+  gap: 10px;
+
+  padding: 10px;
+
+  border:
+    1px solid transparent;
+
+  border-radius: 9px;
+
+  background:
+    rgba(255, 255, 255, 0.035);
+
+  color: #fff;
+
+  text-align: left;
+
+  cursor: pointer;
+
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
+}
+
+
+.dm-friend-button:hover {
+  background:
+    rgba(102, 252, 241, 0.08);
+
+  border-color:
+    rgba(102, 252, 241, 0.25);
+}
+
+
+.dm-friend-avatar {
+  width: 38px;
+  height: 38px;
+
+  flex: 0 0 38px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  overflow: hidden;
+
+  border-radius: 50%;
+
+  background: #45a29e;
+  color: #081014;
+
+  font-weight: 900;
+}
+
+
+.dm-friend-avatar img {
+  width: 100%;
+  height: 100%;
+
+  object-fit: cover;
+}
+
+
+.dm-friend-copy {
+  min-width: 0;
+
+  display: flex;
+  flex-direction: column;
+
+  gap: 3px;
+}
+
+
+.dm-friend-copy strong {
+  overflow: hidden;
+
+  color: #fff;
+
+  font-size: 13px;
+
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+
+.dm-online,
+.dm-offline {
+  font-size: 9px;
+  font-weight: 800;
+
+  letter-spacing: 0.6px;
+}
+
+
+.dm-online {
+  color: #47e69a;
+}
+
+
+.dm-offline {
+  color: #737b85;
+}
+
+
+.dm-conversation-column {
+  min-height: 0;
+
+  display: flex;
+  flex-direction: column;
+}
+
+
+.dm-conversation-title {
+  min-height: 52px;
+
+  display: flex;
+  align-items: center;
+
+  padding: 0 18px;
+
+  border-bottom:
+    1px solid rgba(255, 255, 255, 0.06);
+
+  color: #fff;
+
+  font-size: 14px;
+  font-weight: 900;
+
+  letter-spacing: 1px;
+}
+
+
+/* =====================================================
+   SHARED CHAT MESSAGES
+===================================================== */
+
+.chat-message-list {
+  min-height: 0;
+
+  flex: 1;
+
+  display: flex;
+  flex-direction: column;
+
+  gap: 9px;
+
+  overflow-y: auto;
+
+  padding: 16px;
+}
+
+
+.chat-message {
+  max-width: 76%;
+
+  align-self: flex-start;
+
+  padding: 9px 11px;
+
+  border:
+    1px solid rgba(255, 255, 255, 0.07);
+
+  border-radius:
+    4px
+    11px
+    11px
+    11px;
+
+  background:
+    rgba(255, 255, 255, 0.055);
+
+  overflow-wrap: anywhere;
+}
+
+
+.chat-message.own {
+  align-self: flex-end;
+
+  border-color:
+    rgba(102, 252, 241, 0.24);
+
+  border-radius:
+    11px
+    4px
+    11px
+    11px;
+
+  background:
+    rgba(69, 162, 158, 0.14);
+}
+
+
+.chat-message.compact {
+  max-width: 95%;
+
+  padding: 6px 8px;
+}
+
+
+.chat-message-meta {
+  display: flex;
+  align-items: center;
+
+  gap: 8px;
+
+  margin-bottom: 4px;
+}
+
+
+.chat-message-sender {
+  color: #66fcf1;
+
+  font-size: 10px;
+  font-weight: 900;
+}
+
+
+.chat-message-time {
+  color: #66707b;
+
+  font-size: 9px;
+}
+
+
+.chat-message-text {
+  color: #e9edf1;
+
+  font-size: 13px;
+
+  line-height: 1.35;
+}
+
+
+.chat-message.compact
+.chat-message-text {
+  font-size: 12px;
+}
+
+
+.chat-empty {
+  margin: auto;
+
+  color: #68727d;
+
+  font-size: 12px;
+
+  text-align: center;
+}
+
+
+.chat-error {
+  color: #ff7373;
+}
+
+
+/* =====================================================
+   INPUTS
+===================================================== */
+
+.chat-input-row {
+  display: flex;
+
+  gap: 8px;
+
+  padding: 12px;
+
+  border-top:
+    1px solid rgba(255, 255, 255, 0.06);
+}
+
+
+.chat-input {
+  min-width: 0;
+
+  flex: 1;
+
+  padding: 10px 12px;
+
+  border:
+    1px solid rgba(102, 252, 241, 0.22);
+
+  border-radius: 7px;
+
+  outline: none;
+
+  background:
+    rgba(4, 7, 10, 0.88);
+
+  color: #fff;
+
+  font-size: 13px;
+}
+
+
+.chat-input:focus {
+  border-color: #66fcf1;
+
+  box-shadow:
+    0 0 0 2px
+    rgba(102, 252, 241, 0.08);
+}
+
+
+.chat-input:disabled {
+  opacity: 0.4;
+
+  cursor: not-allowed;
+}
+
+
+.chat-send-btn {
+  padding: 0 15px;
+
+  border: none;
+  border-radius: 7px;
+
+  background: #45a29e;
+  color: #081014;
+
+  font-size: 11px;
+  font-weight: 900;
+
+  letter-spacing: 0.7px;
+
+  cursor: pointer;
+}
+
+
+.chat-send-btn:hover {
+  background: #66fcf1;
+}
+
+
+.chat-send-btn:disabled {
+  opacity: 0.4;
+
+  cursor: not-allowed;
+}
+
+
+/* =====================================================
+   LOBBY SOCIAL TABS
+===================================================== */
+
+.lobby-social-tabs {
+  width: 124px;
+
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+
+  gap: 7px;
+}
+
+
+.lobby-social-tab {
+  width: 100%;
+
+  margin: 0;
+
+  text-align: center;
+}
+
+
+/* =====================================================
+   SQUAD CHAT — ROUND BUTTON THAT EXPANDS
+===================================================== */
+
+.squad-chat-panel {
+  /*
+    CLOSED:
+    one 48px round chat icon.
+
+    OPEN:
+    this SAME element expands into the
+    chat window.
+
+    left:40px also keeps the open box
+    entirely in the empty area left of
+    the player grid.
+  */
+
+  position: absolute;
+
+  left: 40px;
+  bottom: 116px;
+
+  width: 48px;
+  height: 48px;
+
+  z-index: 260;
+
+  overflow: hidden;
+
+  border:
+    1px solid
+    rgba(69, 162, 158, 0.78);
+
+  border-radius: 50%;
+
+  background:
+    rgba(18, 24, 31, 0.96);
+
+  box-shadow:
+    0 10px 28px
+    rgba(0, 0, 0, 0.34);
+
+  transition:
+    width 0.18s ease,
+    height 0.18s ease,
+    border-radius 0.18s ease,
+    background 0.18s ease;
+}
+
+
+/*
+  The BACK TO LOBBY button is bottom:40px.
+
+  This chat starts at bottom:116px, so there
+  is a visible gap between the two.
+*/
+
+.squad-chat-panel.open {
+  width: 310px;
+  height: 300px;
+
+  border-radius: 12px;
+
+  background:
+    rgba(10, 13, 17, 0.97);
+}
+
+
+/* =====================================================
+   CLOSED ROUND BUTTON
+===================================================== */
+
+.squad-chat-toggle {
+  position: absolute;
+
+  inset: 0;
+
+  width: 48px;
+  height: 48px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 0;
+
+  border: none;
+  border-radius: 50%;
+
+  background:
+    #1f2833;
+
+  color:
+    #66fcf1;
+
+  cursor: pointer;
+
+  font-size: 19px;
+
+  line-height: 1;
+
+  transition:
+    background 0.15s ease,
+    transform 0.15s ease,
+    opacity 0.10s ease;
+}
+
+
+.squad-chat-toggle:hover {
+  background:
+    #29404a;
+
+  transform:
+    scale(1.04);
+}
+
+
+.squad-chat-panel.open
+.squad-chat-toggle {
+  opacity: 0;
+
+  pointer-events: none;
+}
+
+
+/* =====================================================
+   EXPANDED SQUAD CHAT
+===================================================== */
+
+.squad-chat-expanded {
+  position: absolute;
+
+  inset: 0;
+
+  min-width: 310px;
+  min-height: 300px;
+
+  display: flex;
+  flex-direction: column;
+
+  opacity: 0;
+
+  visibility: hidden;
+  pointer-events: none;
+
+  transition:
+    opacity 0.12s ease 0.05s;
+}
+
+
+.squad-chat-panel.open
+.squad-chat-expanded {
+  opacity: 1;
+
+  visibility: visible;
+  pointer-events: auto;
+}
+
+
+.squad-chat-header {
+  height: 42px;
+
+  flex-shrink: 0;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  padding:
+    0
+    11px
+    0
+    13px;
+
+  border-bottom:
+    1px solid
+    rgba(102, 252, 241, 0.13);
+
+  background:
+    rgba(31, 40, 51, 0.98);
+
+  color:
+    #66fcf1;
+
+  font-size: 10px;
+  font-weight: 900;
+
+  letter-spacing: 1.2px;
+}
+
+
+.squad-chat-close {
+  width: 28px;
+  height: 28px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 0;
+
+  border: none;
+  border-radius: 50%;
+
+  background:
+    rgba(255, 255, 255, 0.06);
+
+  color:
+    #8d98a2;
+
+  cursor: pointer;
+
+  font-size: 11px;
+}
+
+
+.squad-chat-close:hover {
+  background:
+    rgba(255, 255, 255, 0.12);
+
+  color:
+    #ffffff;
+}
+
+
+/* =====================================================
+   SQUAD MESSAGE HISTORY
+===================================================== */
+
+.squad-chat-messages {
+  min-height: 0;
+
+  flex: 1;
+
+  display: flex;
+  flex-direction: column;
+
+  gap: 6px;
+
+  overflow-y: auto;
+
+  padding: 10px;
+
+  background:
+    rgba(5, 8, 11, 0.76);
+
+  scrollbar-width: thin;
+}
+
+
+.squad-chat-messages
+.chat-message {
+  max-width: 92%;
+
+  align-self: flex-start;
+
+  margin: 0;
+
+  padding:
+    6px
+    8px;
+
+  border:
+    1px solid
+    rgba(255, 255, 255, 0.06);
+
+  border-radius: 7px;
+
+  background:
+    rgba(255, 255, 255, 0.055);
+}
+
+
+.squad-chat-messages
+.chat-message.own {
+  align-self: flex-end;
+
+  border-color:
+    rgba(102, 252, 241, 0.18);
+
+  background:
+    rgba(69, 162, 158, 0.16);
+}
+
+
+.squad-chat-messages
+.chat-message-meta {
+  margin-bottom: 3px;
+}
+
+
+.squad-chat-messages
+.chat-message-sender {
+  font-size: 9px;
+}
+
+
+.squad-chat-messages
+.chat-message-time {
+  font-size: 8px;
+}
+
+
+.squad-chat-messages
+.chat-message-text {
+  font-size: 11px;
+
+  line-height: 1.3;
+}
+
+
+/* =====================================================
+   SQUAD CHAT INPUT
+===================================================== */
+
+.squad-chat-input-row {
+  height: 46px;
+
+  flex-shrink: 0;
+
+  display: flex;
+  align-items: center;
+
+  gap: 6px;
+
+  padding: 7px;
+
+  border-top:
+    1px solid
+    rgba(102, 252, 241, 0.10);
+
+  background:
+    rgba(16, 20, 25, 0.98);
+}
+
+
+.squad-chat-input {
+  min-width: 0;
+  height: 31px;
+
+  flex: 1;
+
+  padding:
+    0
+    9px;
+
+  border:
+    1px solid
+    rgba(69, 162, 158, 0.45);
+
+  border-radius: 5px;
+
+  outline: none;
+
+  background:
+    #0b0c10;
+
+  color:
+    #ffffff;
+
+  font-size: 11px;
+}
+
+
+.squad-chat-input:focus {
+  border-color:
+    #66fcf1;
+}
+
+
+.squad-chat-input::placeholder {
+  color:
+    #626c75;
+}
+
+
+.squad-chat-send {
+  height: 31px;
+
+  padding:
+    0
+    11px;
+
+  border:
+    1px solid
+    #45a29e;
+
+  border-radius: 5px;
+
+  background:
+    #1f2833;
+
+  color:
+    #66fcf1;
+
+  cursor: pointer;
+
+  font-size: 9px;
+  font-weight: 900;
+
+  letter-spacing: 0.7px;
+}
+
+
+.squad-chat-send:hover {
+  background:
+    #45a29e;
+
+  color:
+    #0b0c10;
+}
+
+
+/* =====================================================
+   ARENA CHAT — MID/TOP RIGHT
+===================================================== */
+
+.arena-chat-panel {
+  /*
+    NOT on the screen edge.
+
+    This lives in the open upper-right region.
+
+    Ability controls remain in their existing
+    bottom-right position.
+  */
+
+  position: fixed;
+
+  top: 150px;
+  right: 24px;
+
+  width: 350px;
+
+  z-index: 120;
+
+  display: flex;
+  flex-direction: column;
+
+  gap: 7px;
+
+  padding: 10px;
+
+  border:
+    1px solid
+    rgba(102, 252, 241, 0.18);
+
+  border-radius: 10px;
+
+  background:
+    rgba(8, 11, 15, 0.64);
+
+  box-shadow:
+    0 10px 26px
+    rgba(0, 0, 0, 0.24);
+
+  pointer-events: none;
+}
+
+
+.arena-chat-messages {
+  max-height: 120px;
+
+  display: flex;
+  flex-direction: column;
+
+  gap: 4px;
+
+  overflow-y: auto;
+
+  padding:
+    2px
+    2px
+    4px;
+
+  pointer-events: auto;
+
+  scrollbar-width: thin;
+}
+
+
+.arena-chat-messages::-webkit-scrollbar {
+  display: none;
+}
+
+
+.arena-chat-messages
+.chat-message {
+  max-width: 94%;
+
+  padding:
+    4px
+    7px;
+
+  border:
+    1px solid
+    rgba(255, 255, 255, 0.05);
+
+  border-radius: 6px;
+
+  background:
+    rgba(3, 5, 8, 0.76);
+
+  text-shadow:
+    0 1px 2px
+    rgba(0, 0, 0, 0.82);
+
+  transition:
+    opacity 1s ease;
+}
+
+
+.arena-chat-messages
+.chat-message-text {
+  font-size: 10px;
+
+  line-height: 1.25;
+}
+
+
+.arena-chat-messages
+.chat-message.own {
+  align-self: flex-end;
+
+  border-color:
+    rgba(102, 252, 241, 0.15);
+
+  background:
+    rgba(24, 82, 84, 0.76);
+}
+
+
+.arena-chat-messages
+.chat-message-meta {
+  margin-bottom: 2px;
+}
+
+
+.arena-chat-messages
+.chat-message-sender {
+  font-size: 9px;
+}
+
+
+.arena-chat-messages
+.chat-message-time {
+  font-size: 8px;
+}
+
+
+.arena-chat-messages
+.chat-message-text {
+  font-size: 11px;
+
+  line-height: 1.25;
+}
+
+
+.arena-chat-old {
+  opacity: 0.32;
+}
+
+
+/* =====================================================
+   ARENA CHAT INPUT
+===================================================== */
+
+.arena-chat-input-row {
+  width: 100%;
+
+  padding: 0;
+
+  border: none;
+
+  pointer-events: auto;
+}
+
+
+.arena-chat-input {
+  width: 100%;
+  height: 31px;
+
+  padding:
+    6px
+    8px;
+
+  border:
+    1px solid
+    rgba(102, 252, 241, 0.48);
+
+  border-radius: 6px;
+
+  outline: none;
+
+  background:
+    rgba(2, 5, 8, 0.94);
+
+  color:
+    #ffffff;
+
+  font-size: 10px;
+}
+
+
+.arena-chat-input:focus {
+  border-color:
+    #66fcf1;
+
+  box-shadow:
+    0 0 0 2px
+    rgba(102, 252, 241, 0.08);
+}
+
+
+.arena-chat-hint {
+  align-self: flex-end;
+
+  padding:
+    4px
+    7px;
+
+  border-radius: 5px;
+
+  background:
+    rgba(3, 5, 8, 0.62);
+
+  color:
+    rgba(255, 255, 255, 0.52);
+
+  font-size: 9px;
+  font-weight: 900;
+
+  letter-spacing: 0.8px;
+
+  pointer-events: none;
+}
+
+
+/* =====================================================
+   RESPONSIVE CHAT POSITIONING
+===================================================== */
+
+@media (
+  max-width: 850px
+) {
+
+  .lobby-social-tabs {
+    width: 116px;
+  }
+
+
+  .squad-chat-panel {
+    left: 20px;
+    bottom: 108px;
+  }
+
+
+  .squad-chat-panel.open {
+    width: 285px;
+    height: 270px;
+  }
+
+
+  .squad-chat-expanded {
+    min-width: 100px;
+    min-height: 270px;
+  }
+
+
+  .arena-chat-panel {
+    position: fixed;
+  
+    top: 150px;
+    right: 24px;
+  
+    width: 260px;
+  
+    z-index: 120;
+  
+    display: flex;
+    flex-direction: column;
+  
+    gap: 6px;
+  
+    padding: 8px;
+  
+    border:
+      1px solid
+      rgba(102, 252, 241, 0.18);
+  
+    border-radius: 9px;
+  
+    background:
+      rgba(8, 11, 15, 0.64);
+  
+    box-shadow:
+      0 10px 26px
+      rgba(0, 0, 0, 0.24);
+  
+    pointer-events: none;
+  }
+}
+
+.arena-chat-messages::-webkit-scrollbar {
+  width: 5px;
+}
+
+
+.arena-chat-messages::-webkit-scrollbar-track {
+  background:
+    rgba(255, 255, 255, 0.03);
+}
+
+
+.arena-chat-messages::-webkit-scrollbar-thumb {
+  background:
+    rgba(102, 252, 241, 0.28);
+
+  border-radius: 10px;
+}
+
+/* =====================================================
+   FINAL ARENA CHAT SIZE OVERRIDE
+===================================================== */
+
+#arena-chat-panel.arena-chat-panel {
+  width: 225px !important;
+  min-width: 225px !important;
+  max-width: 225px !important;
+
+  top: 150px !important;
+  right: 28px !important;
+
+  padding: 7px !important;
+}
+
+
+#arena-chat-messages.arena-chat-messages {
+  width: 100% !important;
+
+  max-height: 105px !important;
+
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+
+  display: flex !important;
+  flex-direction: column !important;
+
+  gap: 4px !important;
+
+  padding:
+    2px
+    1px
+    3px !important;
+
+  pointer-events: auto !important;
+
+  scrollbar-width: thin;
+}
+
+
+#arena-chat-messages
+.chat-message {
+  width: fit-content !important;
+
+  max-width: 88% !important;
+
+  padding:
+    4px
+    6px !important;
+
+  font-size: 10px !important;
+}
+
+
+#arena-chat-messages
+.chat-message.own {
+  align-self: flex-end !important;
+}
+
+
+#arena-chat-messages
+.chat-message-text {
+  font-size: 10px !important;
+
+  line-height: 1.2 !important;
+
+  overflow-wrap: anywhere !important;
+}
+
+
+#arena-chat-messages
+.chat-message-meta {
+  gap: 5px !important;
+
+  margin-bottom: 2px !important;
+}
+
+
+#arena-chat-messages
+.chat-message-sender {
+  font-size: 8px !important;
+}
+
+
+#arena-chat-messages
+.chat-message-time {
+  font-size: 7px !important;
+}
+
+
+#arena-chat-input-row.arena-chat-input-row {
+  width: 100% !important;
+}
+
+
+#arena-chat-input.arena-chat-input {
+  width: 100% !important;
+  height: 29px !important;
+
+  padding:
+    5px
+    7px !important;
+
+  font-size: 10px !important;
+}
+
+
+#arena-chat-hint.arena-chat-hint {
+  padding:
+    3px
+    6px !important;
+
+  font-size: 8px !important;
+}

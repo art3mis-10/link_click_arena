@@ -31,6 +31,8 @@ const jwt =
 const User =
   require('./User');
 
+const Message =
+  require('./Message')
 
 const GameManager =
   require('./gameRoom');
@@ -1732,6 +1734,153 @@ app.post(
   }
 );
 
+// =====================================================
+// CHAT HELPERS
+// =====================================================
+
+const DM_EXPIRY_MS =
+  24 *
+  60 *
+  60 *
+  1000;
+
+
+const CHAT_MAX_LENGTH =
+  200;
+
+
+function cleanChatText(
+  value
+) {
+
+  if (
+    typeof value !==
+    'string'
+  ) {
+
+    return null;
+  }
+
+
+  const text =
+    value.trim();
+
+
+  if (
+    !text ||
+    text.length >
+      CHAT_MAX_LENGTH
+  ) {
+
+    return null;
+  }
+
+
+  return text;
+}
+
+
+// =====================================================
+// FRIEND CHECK
+// =====================================================
+
+async function usersAreFriends(
+  usernameA,
+  usernameB
+) {
+
+  if (
+    !usernameA ||
+    !usernameB ||
+    usernameA ===
+      usernameB
+  ) {
+
+    return false;
+  }
+
+
+  const [
+    userA,
+    userB
+  ] =
+    await Promise.all([
+
+      User
+        .findOne({
+          username:
+            usernameA
+        })
+        .select(
+          'friends'
+        ),
+
+      User
+        .findOne({
+          username:
+            usernameB
+        })
+        .select(
+          '_id'
+        )
+    ]);
+
+
+  if (
+    !userA ||
+    !userB
+  ) {
+
+    return false;
+  }
+
+
+  return userA
+    .friends
+    .some(
+      friendId =>
+
+        friendId.toString() ===
+        userB._id.toString()
+    );
+}
+
+
+// =====================================================
+// SERIALIZE DM
+// =====================================================
+
+function publicDirectMessage(
+  message
+) {
+
+  return {
+
+    id:
+      message._id
+        .toString(),
+
+    sender:
+      message.sender,
+
+    recipient:
+      message.recipient,
+
+    text:
+      message.text,
+
+    createdAt:
+      message.createdAt,
+
+    readAt:
+      message.readAt ||
+      null,
+
+    expiresAt:
+      message.expiresAt ||
+      null
+  };
+}
 
 // =====================================================
 // SOCKET.IO
@@ -2309,6 +2458,772 @@ io.on(
         socket.emit(
           'left_squad'
         );
+      }
+    );
+
+        // =================================================
+    // DIRECT MESSAGE — OPEN CONVERSATION
+    // =================================================
+
+    socket.on(
+      'dm_open',
+
+      async (
+        {
+          friendUsername
+        },
+        callback
+      ) => {
+
+        try {
+
+          if (
+            !authenticatedUser ||
+            !friendUsername
+          ) {
+
+            if (
+              typeof callback ===
+              'function'
+            ) {
+
+              callback({
+
+                success:
+                  false,
+
+                message:
+                  'Invalid conversation.'
+              });
+            }
+
+
+            return;
+          }
+
+
+          const areFriends =
+            await usersAreFriends(
+
+              authenticatedUser,
+
+              friendUsername
+            );
+
+
+          if (
+            !areFriends
+          ) {
+
+            if (
+              typeof callback ===
+              'function'
+            ) {
+
+              callback({
+
+                success:
+                  false,
+
+                message:
+                  'You can only message friends.'
+              });
+            }
+
+
+            return;
+          }
+
+
+          /*
+            Remember which DM this socket
+            currently has OPEN.
+
+            This allows incoming messages to
+            count as immediately read only while
+            the conversation is actually open.
+          */
+
+          socket.data.activeDmPartner =
+            friendUsername;
+
+
+          // =============================================
+          // MARK THEIR UNREAD MESSAGES AS READ
+          // =============================================
+
+          const readAt =
+            new Date();
+
+
+          const expiresAt =
+            new Date(
+
+              readAt.getTime() +
+              DM_EXPIRY_MS
+            );
+
+
+          await Message.updateMany(
+
+            {
+
+              sender:
+                friendUsername,
+
+              recipient:
+                authenticatedUser,
+
+              readAt:
+                null
+            },
+
+            {
+
+              $set: {
+
+                readAt,
+
+                expiresAt
+              }
+            }
+          );
+
+
+          // =============================================
+          // LOAD LATEST 100 MESSAGES
+          // =============================================
+
+          let messages =
+            await Message
+              .find({
+
+                $or: [
+
+                  {
+
+                    sender:
+                      authenticatedUser,
+
+                    recipient:
+                      friendUsername
+                  },
+
+                  {
+
+                    sender:
+                      friendUsername,
+
+                    recipient:
+                      authenticatedUser
+                  }
+                ]
+              })
+              .sort({
+                createdAt:
+                  -1
+              })
+              .limit(
+                100
+              )
+              .lean();
+
+
+          messages =
+            messages.reverse();
+
+
+          if (
+            typeof callback ===
+            'function'
+          ) {
+
+            callback({
+
+              success:
+                true,
+
+              friendUsername,
+
+              messages:
+                messages.map(
+                  publicDirectMessage
+                )
+            });
+          }
+
+
+          /*
+            Optional real-time notification to
+            sender that messages were read.
+
+            We don't need visible read receipts
+            yet, but this keeps the protocol
+            ready for them.
+          */
+
+          const friendSocketId =
+            onlineUsers.get(
+              friendUsername
+            );
+
+
+          if (
+            friendSocketId
+          ) {
+
+            io
+              .to(
+                friendSocketId
+              )
+              .emit(
+                'dm_messages_read',
+                {
+
+                  by:
+                    authenticatedUser,
+
+                  readAt,
+
+                  expiresAt
+                }
+              );
+          }
+
+        } catch (error) {
+
+          console.error(
+            'DM open error:',
+            error
+          );
+
+
+          if (
+            typeof callback ===
+            'function'
+          ) {
+
+            callback({
+
+              success:
+                false,
+
+              message:
+                'Failed to open conversation.'
+            });
+          }
+        }
+      }
+    );
+
+
+    // =================================================
+    // DIRECT MESSAGE — CLOSE CONVERSATION
+    // =================================================
+
+    socket.on(
+      'dm_close',
+      ({
+        friendUsername
+      } = {}) => {
+
+        if (
+          !friendUsername ||
+          socket.data
+            .activeDmPartner ===
+            friendUsername
+        ) {
+
+          socket.data.activeDmPartner =
+            null;
+        }
+      }
+    );
+
+
+    // =================================================
+    // DIRECT MESSAGE — SEND
+    // =================================================
+
+    socket.on(
+      'dm_send',
+
+      async (
+        {
+          to,
+          text
+        },
+        callback
+      ) => {
+
+        try {
+
+          if (
+            !authenticatedUser ||
+            !to
+          ) {
+
+            if (
+              typeof callback ===
+              'function'
+            ) {
+
+              callback({
+
+                success:
+                  false,
+
+                message:
+                  'Invalid message.'
+              });
+            }
+
+
+            return;
+          }
+
+
+          const cleanedText =
+            cleanChatText(
+              text
+            );
+
+
+          if (
+            !cleanedText
+          ) {
+
+            if (
+              typeof callback ===
+              'function'
+            ) {
+
+              callback({
+
+                success:
+                  false,
+
+                message:
+                  'Message must be 1–200 characters.'
+              });
+            }
+
+
+            return;
+          }
+
+
+          const areFriends =
+            await usersAreFriends(
+
+              authenticatedUser,
+
+              to
+            );
+
+
+          if (
+            !areFriends
+          ) {
+
+            if (
+              typeof callback ===
+              'function'
+            ) {
+
+              callback({
+
+                success:
+                  false,
+
+                message:
+                  'You can only message friends.'
+              });
+            }
+
+
+            return;
+          }
+
+
+          // =============================================
+          // CHECK WHETHER RECIPIENT IS READING RIGHT NOW
+          // =============================================
+
+          const recipientSocketId =
+            onlineUsers.get(
+              to
+            );
+
+
+          const recipientSocket =
+            recipientSocketId
+
+              ? io
+                  .sockets
+                  .sockets
+                  .get(
+                    recipientSocketId
+                  )
+
+              : null;
+
+
+          const recipientReadingNow =
+
+            Boolean(
+              recipientSocket
+            ) &&
+
+            recipientSocket
+              .data
+              .activeDmPartner ===
+                authenticatedUser;
+
+
+          let readAt =
+            null;
+
+
+          let expiresAt =
+            null;
+
+
+          if (
+            recipientReadingNow
+          ) {
+
+            readAt =
+              new Date();
+
+
+            expiresAt =
+              new Date(
+
+                readAt.getTime() +
+                DM_EXPIRY_MS
+              );
+          }
+
+
+          // =============================================
+          // SAVE
+          // =============================================
+
+          const message =
+            await Message.create({
+
+              sender:
+                authenticatedUser,
+
+              recipient:
+                to,
+
+              text:
+                cleanedText,
+
+              readAt,
+
+              expiresAt
+            });
+
+
+          const payload =
+            publicDirectMessage(
+              message
+            );
+
+
+          // =============================================
+          // SEND TO ONLINE RECIPIENT
+          // =============================================
+
+          if (
+            recipientSocketId
+          ) {
+
+            io
+              .to(
+                recipientSocketId
+              )
+              .emit(
+                'dm_message',
+                payload
+              );
+          }
+
+
+          if (
+            typeof callback ===
+            'function'
+          ) {
+
+            callback({
+
+              success:
+                true,
+
+              message:
+                payload
+            });
+          }
+
+        } catch (error) {
+
+          console.error(
+            'DM send error:',
+            error
+          );
+
+
+          if (
+            typeof callback ===
+            'function'
+          ) {
+
+            callback({
+
+              success:
+                false,
+
+              message:
+                'Failed to send message.'
+            });
+          }
+        }
+      }
+    );
+
+
+    // =================================================
+    // SQUAD LOBBY CHAT
+    // =================================================
+
+    socket.on(
+      'squad_chat_send',
+
+      (
+        {
+          text
+        },
+        callback
+      ) => {
+
+        if (
+          !authenticatedUser
+        ) {
+
+          return;
+        }
+
+
+        const cleanedText =
+          cleanChatText(
+            text
+          );
+
+
+        if (
+          !cleanedText
+        ) {
+
+          if (
+            typeof callback ===
+            'function'
+          ) {
+
+            callback({
+
+              success:
+                false,
+
+              message:
+                'Message must be 1–200 characters.'
+            });
+          }
+
+
+          return;
+        }
+
+
+        const squad =
+          getSquadForUser(
+            authenticatedUser
+          );
+
+
+        if (
+          !squad ||
+          squad.phase !==
+            'lobby' ||
+          !squad.members.includes(
+            authenticatedUser
+          )
+        ) {
+
+          if (
+            typeof callback ===
+            'function'
+          ) {
+
+            callback({
+
+              success:
+                false,
+
+              message:
+                'Squad chat is only available in the squad lobby.'
+            });
+          }
+
+
+          return;
+        }
+
+
+        const payload = {
+
+          sender:
+            authenticatedUser,
+
+          text:
+            cleanedText,
+
+          sentAt:
+            new Date()
+        };
+
+
+        io
+          .to(
+            roomForSquad(
+              squad
+            )
+          )
+          .emit(
+            'squad_chat_message',
+            payload
+          );
+
+
+        if (
+          typeof callback ===
+          'function'
+        ) {
+
+          callback({
+            success:
+              true
+          });
+        }
+      }
+    );
+
+
+    // =================================================
+    // ARENA CHAT
+    // =================================================
+
+    socket.on(
+      'arena_chat_send',
+
+      (
+        {
+          text
+        },
+        callback
+      ) => {
+
+        if (
+          !authenticatedUser
+        ) {
+
+          return;
+        }
+
+
+        const cleanedText =
+          cleanChatText(
+            text
+          );
+
+
+        if (
+          !cleanedText
+        ) {
+
+          if (
+            typeof callback ===
+            'function'
+          ) {
+
+            callback({
+
+              success:
+                false,
+
+              message:
+                'Message must be 1–200 characters.'
+            });
+          }
+
+
+          return;
+        }
+
+
+        const squad =
+          getSquadForUser(
+            authenticatedUser
+          );
+
+
+        if (
+          !squad ||
+          squad.phase !==
+            'arena' ||
+          !squad.members.includes(
+            authenticatedUser
+          )
+        ) {
+
+          return;
+        }
+
+
+        io
+          .to(
+            roomForSquad(
+              squad
+            )
+          )
+          .emit(
+            'arena_chat_message',
+            {
+
+              sender:
+                authenticatedUser,
+
+              text:
+                cleanedText,
+
+              sentAt:
+                new Date()
+            }
+          );
+
+
+        if (
+          typeof callback ===
+            'function'
+        ) {
+
+          callback({
+            success:
+              true
+          });
+        }
       }
     );
 

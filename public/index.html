@@ -1,41 +1,29 @@
 <!DOCTYPE html>
-
 <html lang="en">
-
 <head>
-
   <meta charset="UTF-8">
-
   <title>
     Link Click 2.5D Arena
   </title>
-
   <link
     rel="stylesheet"
     href="/css/style.css"
   >
-
   <script
     src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"
   ></script>
-
   <script
     src="/socket.io/socket.io.js"
   ></script>
-
   <style>
-
     #lobby-screen {
-
       background:
-
         linear-gradient(
           90deg,
           rgba(4, 7, 12, 0.82) 0%,
           rgba(4, 7, 12, 0.48) 48%,
           rgba(4, 7, 12, 0.70) 100%
         ),
-
         url('/assets/lobby_background.jpg')
           center
           center /
@@ -43,81 +31,51 @@
           no-repeat;
     }
 
-
     .characters-lobby-btn {
-
       position: absolute;
-
       left: 40px;
       bottom: 40px;
-
       min-width: 220px;
     }
 
-
     #character-hub-screen {
-
       background:
         radial-gradient(
           circle at top,
           #182534 0%,
           #090c12 72%
         );
-
       overflow-y: auto;
-
       justify-content: flex-start;
-
       gap: 24px;
     }
 
-
     .character-hub-header {
-
       width: 100%;
-
       display: flex;
-
       justify-content: space-between;
-
       align-items: flex-start;
-
       gap: 30px;
     }
 
-
     .character-hub-title {
-
       color: #66fcf1;
-
       font-size: 38px;
-
       letter-spacing: 5px;
-
       font-weight: 900;
     }
 
-
     .character-hub-subtitle {
-
       margin-top: 7px;
-
       color: #87939d;
-
       font-size: 12px;
-
       letter-spacing: 1.5px;
     }
 
-
     .character-mode-tabs {
-
       display: flex;
-
       gap: 8px;
-
       padding: 5px;
-
       background:
         rgba(
           8,
@@ -125,7 +83,6 @@
           16,
           0.80
         );
-
       border:
         1px solid
         rgba(
@@ -134,50 +91,32 @@
           241,
           0.18
         );
-
       border-radius: 10px;
     }
 
-
     .character-mode-tab {
-
       border: none;
-
       background: transparent;
-
       color: #77828c;
-
       padding:
         11px
         21px;
-
       border-radius: 7px;
-
       cursor: pointer;
-
       font-size: 12px;
-
       font-weight: 900;
-
       letter-spacing: 1.4px;
-
       transition:
         0.18s;
     }
 
-
     .character-mode-tab:hover {
-
       color: #fff;
     }
 
-
     .character-mode-tab.active {
-
       background: #45a29e;
-
       color: #071012;
-
       box-shadow:
         0 0 16px
         rgba(
@@ -188,25 +127,16 @@
         );
     }
 
-
     #character-mode-notice {
-
       color: #87939d;
-
       font-size: 12px;
-
       letter-spacing: 0.7px;
-
       min-height: 20px;
     }
 
-
     #character-hub-grid {
-
       width: 100%;
-
       display: grid;
-
       grid-template-columns:
         repeat(
           auto-fill,
@@ -215,23 +145,15 @@
             1fr
           )
         );
-
       gap: 20px;
-
       padding-bottom: 95px;
     }
 
-
     .character-hub-card {
-
       position: relative;
-
       min-height: 430px;
-
       overflow: hidden;
-
       padding: 0;
-
       border:
         1px solid
         rgba(
@@ -240,17 +162,11 @@
           241,
           0.20
         );
-
       border-radius: 14px;
-
       background: #121821;
-
       cursor: pointer;
-
       color: #fff;
-
       text-align: left;
-
       transition:
         transform
         0.18s,
@@ -260,17 +176,13 @@
         0.18s;
     }
 
-
     .character-hub-card:hover {
-
       transform:
         translateY(
           -5px
         );
-
       border-color:
         #66fcf1;
-
       box-shadow:
         0 0 24px
         rgba(
@@ -281,66 +193,44 @@
         );
     }
 
-
     .character-card-image-wrap {
-
       position: relative;
-
       width: 100%;
-
       height: 285px;
-
       overflow: hidden;
-
       background: #080b10;
     }
 
-
     .character-card-image {
-
       width: 100%;
-
       height: 100%;
-
       object-fit: cover;
-
       object-position:
         center
         top;
-
       display: block;
-
       transition:
         transform
         0.25s;
     }
 
-
     .character-hub-card:hover
     .character-card-image {
-
       transform:
         scale(
           1.025
         );
     }
 
-
     .character-rank-slot {
-
       position: absolute;
-
       right: 12px;
       bottom: 12px;
-
       width: 62px;
       height: 62px;
-
       display: flex;
-
       align-items: center;
       justify-content: center;
-
       background:
         rgba(
           3,
@@ -348,7 +238,6 @@
           12,
           0.86
         );
-
       border:
         1px solid
         rgba(
@@ -357,113 +246,74 @@
           255,
           0.16
         );
-
       border-radius: 10px;
-
       backdrop-filter:
         blur(
           5px
         );
     }
 
-
     .proficiency-pixel-icon {
-
       display: block;
-
       image-rendering:
         pixelated;
-
       image-rendering:
         crisp-edges;
     }
 
-
     .character-card-copy {
-
       padding:
         17px
         18px
         20px;
     }
 
-
     .character-card-role {
-
       color: #45a29e;
-
       font-size: 10px;
-
       font-weight: 900;
-
       letter-spacing: 2px;
-
       margin-bottom: 5px;
     }
 
-
     .character-card-copy h2 {
-
       color: #fff;
-
       font-size: 21px;
-
       letter-spacing: 1px;
-
       margin-bottom: 14px;
     }
 
-
     .character-card-stats {
-
       display: flex;
-
       flex-wrap: wrap;
-
       gap:
         6px
         12px;
-
       color: #89949e;
-
       font-size: 10px;
-
       letter-spacing: 0.7px;
     }
 
-
     .character-card-stats
     span:first-child {
-
       color: #66fcf1;
-
       font-weight: 900;
     }
 
-
     .character-coming-soon {
-
       grid-column:
         1 /
         -1;
-
       height: 320px;
-
       display: flex;
-
       flex-direction: column;
-
       align-items: center;
       justify-content: center;
-
       gap: 12px;
-
       border:
         1px dashed
         #34414c;
-
       border-radius: 14px;
-
       background:
         rgba(
           9,
@@ -471,42 +321,26 @@
           19,
           0.70
         );
-
       color: #66fcf1;
-
       font-size: 24px;
-
       font-weight: 900;
-
       letter-spacing: 4px;
     }
 
-
     .character-coming-soon span {
-
       color: #6f7c87;
-
       font-size: 11px;
-
       letter-spacing: 2px;
     }
 
-
     #character-detail-overlay {
-
       position: fixed;
-
       inset: 0;
-
       z-index: 15000;
-
       display: none;
-
       align-items: center;
       justify-content: center;
-
       padding: 30px;
-
       background:
         rgba(
           2,
@@ -514,29 +348,22 @@
           9,
           0.86
         );
-
       backdrop-filter:
         blur(
           8px
         );
     }
 
-
     .character-detail-panel {
-
       position: relative;
-
       width:
         min(
           930px,
           94vw
         );
-
       max-height:
         90vh;
-
       overflow-y: auto;
-
       border:
         1px solid
         rgba(
@@ -545,16 +372,13 @@
           241,
           0.25
         );
-
       border-radius: 17px;
-
       background:
         linear-gradient(
           145deg,
           #151d27,
           #090d13
         );
-
       box-shadow:
         0
         25px
@@ -565,27 +389,18 @@
           0,
           0.65
         );
-
       padding: 26px;
     }
 
-
     .character-detail-close {
-
       position: absolute;
-
       top: 14px;
       right: 16px;
-
       z-index: 2;
-
       width: 36px;
       height: 36px;
-
       border: none;
-
       border-radius: 50%;
-
       background:
         rgba(
           255,
@@ -593,17 +408,12 @@
           255,
           0.08
         );
-
       color: #fff;
-
       cursor: pointer;
-
       font-size: 17px;
     }
 
-
     .character-detail-close:hover {
-
       background:
         rgba(
           255,
@@ -613,36 +423,24 @@
         );
     }
 
-
     .character-detail-hero {
-
       display: grid;
-
       grid-template-columns:
         230px
         1fr;
-
       gap: 28px;
-
       align-items: center;
-
       margin-bottom: 26px;
     }
 
-
     .character-detail-hero > img {
-
       width: 230px;
       height: 260px;
-
       object-fit: cover;
-
       object-position:
         center
         top;
-
       border-radius: 12px;
-
       border:
         1px solid
         rgba(
@@ -653,82 +451,52 @@
         );
     }
 
-
     .character-detail-heading h1 {
-
       margin:
         5px
         0
         14px;
-
       color: #fff;
-
       font-size: 34px;
-
       letter-spacing: 2px;
     }
 
-
     .character-detail-rank-row {
-
       display: flex;
-
       align-items: center;
-
       gap: 12px;
-
       margin-bottom: 17px;
     }
 
-
     .character-detail-rank-row > div:last-child {
-
       display: flex;
-
       flex-direction: column;
-
       gap: 3px;
     }
 
-
     .character-detail-rank-name {
-
       color: #66fcf1;
-
       font-size: 15px;
-
       font-weight: 900;
-
       letter-spacing: 2px;
     }
 
-
     .character-detail-rank-score {
-
       color: #75828d;
-
       font-size: 10px;
-
       text-transform: uppercase;
     }
 
-
     .character-detail-summary {
-
       display: flex;
-
       flex-wrap: wrap;
-
       gap: 8px;
     }
 
-
     .character-detail-summary span {
-
       padding:
         7px
         11px;
-
       background:
         rgba(
           255,
@@ -736,133 +504,85 @@
           255,
           0.055
         );
-
       border-radius: 6px;
-
       color: #b5bec6;
-
       font-size: 10px;
-
       letter-spacing: 0.8px;
     }
 
-
     .character-detail-mode-label {
-
       color: #66fcf1;
-
       font-size: 11px;
-
       font-weight: 900;
-
       letter-spacing: 2.5px;
-
       border-bottom:
         1px solid
         #27313b;
-
       padding-bottom: 10px;
-
       margin-bottom: 11px;
     }
 
-
     .character-ability-detail {
-
       display: grid;
-
       grid-template-columns:
         70px
         1fr;
-
       gap: 15px;
-
       align-items: start;
-
       padding:
         16px
         0;
-
       border-bottom:
         1px solid
         #202932;
     }
 
-
     .character-ability-key {
-
       height: 47px;
-
       display: flex;
-
       align-items: center;
       justify-content: center;
-
       border:
         1px solid
         #45a29e;
-
       border-radius: 7px;
-
       background: #121a22;
-
       color: #66fcf1;
-
       font-size: 12px;
-
       font-weight: 900;
     }
 
-
     .character-ability-detail h3 {
-
       color: #fff;
-
       font-size: 17px;
-
       letter-spacing: 1px;
-
       margin-bottom: 5px;
     }
 
-
     .character-ability-detail p {
-
       color: #9aa4ad;
-
       font-size: 12px;
-
       line-height: 1.65;
     }
-
 
     @media (
       max-width:
       700px
     ) {
-
       .character-detail-hero {
-
         grid-template-columns:
           1fr;
       }
 
-
       .character-detail-hero > img {
-
         width: 100%;
-
         height: 310px;
       }
     }
-
   </style>
-
 </head>
 
-
 <body>
-
 
   <!-- LOGIN -->
 
@@ -870,13 +590,11 @@
     id="login-screen"
     class="screen"
   >
-
     <div class="login-box">
 
       <div class="login-title">
         LINK CLICK
       </div>
-
 
       <input
         type="text"
@@ -885,14 +603,12 @@
         placeholder="Username..."
       >
 
-
       <input
         type="password"
         id="password"
         class="input-field"
         placeholder="Password..."
       >
-
 
       <div
         style="
@@ -901,7 +617,6 @@
           width:100%;
         "
       >
-
         <button
           class="btn"
           style="flex:1;"
@@ -910,7 +625,6 @@
           LOGIN
         </button>
 
-
         <button
           class="btn secondary-btn"
           style="flex:1;"
@@ -918,9 +632,7 @@
         >
           REGISTER
         </button>
-
       </div>
-
 
       <p
         id="auth-error"
@@ -931,11 +643,8 @@
           display:none;
         "
       ></p>
-
     </div>
-
   </div>
-
 
   <!-- MAIN LOBBY -->
 
@@ -944,15 +653,11 @@
     class="screen"
     style="display:none;"
   >
-
     <div class="lobby-header">
-
       <h1>
         TIME AGENT LOBBY
       </h1>
-
     </div>
-
 
     <div class="top-right-bar-container">
 
@@ -960,7 +665,6 @@
         class="top-right-bar"
         onclick="openProfileScreen()"
       >
-
         <div
           id="top-pfp"
           class="round-pfp"
@@ -968,26 +672,33 @@
           ?
         </div>
 
-
         <span
           id="top-username"
           class="top-username-text"
         >
           Player
         </span>
+      </div>
+
+      <div class="lobby-social-tabs">
+
+        <button
+          class="friends-btn-shortcut lobby-social-tab"
+          onclick="openFriendsScreen()"
+        >
+          FRIENDS
+        </button>
+
+        <button
+          class="friends-btn-shortcut lobby-social-tab"
+          onclick="openLobbyChat()"
+        >
+          CHAT
+        </button>
 
       </div>
 
-
-      <button
-        class="friends-btn-shortcut"
-        onclick="openFriendsScreen()"
-      >
-        👥 FRIENDS
-      </button>
-
     </div>
-
 
     <button
       class="
@@ -1000,7 +711,6 @@
       CHARACTERS
     </button>
 
-
     <div class="mode-buttons">
 
       <button
@@ -1010,7 +720,6 @@
         PVP ARENA
       </button>
 
-
       <button
         class="btn mode-btn"
         onclick="openMode('match')"
@@ -1019,9 +728,7 @@
       </button>
 
     </div>
-
   </div>
-
 
   <!-- CHARACTER HUB -->
 
@@ -1030,22 +737,17 @@
     class="screen"
     style="display:none;"
   >
-
     <div class="character-hub-header">
 
       <div>
-
         <div class="character-hub-title">
           CHARACTERS
         </div>
 
-
         <div class="character-hub-subtitle">
           AGENT ARCHIVE • ABILITIES & PROFICIENCY
         </div>
-
       </div>
-
 
       <div class="character-mode-tabs">
 
@@ -1061,7 +763,6 @@
           PVP ARENA
         </button>
 
-
         <button
           id="character-tab-classic"
           class="character-mode-tab"
@@ -1075,19 +776,15 @@
         </button>
 
       </div>
-
     </div>
-
 
     <div
       id="character-mode-notice"
     ></div>
 
-
     <div
       id="character-hub-grid"
     ></div>
-
 
     <button
       class="
@@ -1103,9 +800,7 @@
     >
       BACK TO LOBBY
     </button>
-
   </div>
-
 
   <!-- CHARACTER DETAIL -->
 
@@ -1119,7 +814,6 @@
       }
     "
   >
-
     <div class="character-detail-panel">
 
       <button
@@ -1129,15 +823,11 @@
         ✕
       </button>
 
-
       <div
         id="character-detail-content"
       ></div>
-
     </div>
-
   </div>
-
 
   <!-- PROFILE -->
 
@@ -1146,7 +836,6 @@
     class="screen"
     style="display:none;"
   >
-
     <div class="profile-card">
 
       <button
@@ -1159,7 +848,6 @@
       >
         ✕
       </button>
-
 
       <div class="profile-header">
 
@@ -1174,7 +862,6 @@
               .click()
           "
         >
-
           <div
             id="profile-page-pfp"
             class="
@@ -1185,7 +872,6 @@
             ?
           </div>
 
-
           <div
             class="pfp-overlay"
             id="pfp-overlay"
@@ -1194,9 +880,7 @@
               Upload
             </span>
           </div>
-
         </div>
-
 
         <input
           type="file"
@@ -1210,13 +894,10 @@
           "
         >
 
-
         <div class="profile-info">
-
           <h2 id="profile-page-username">
             Player Name
           </h2>
-
 
           <span
             class="status-badge"
@@ -1224,16 +905,13 @@
           >
             ONLINE
           </span>
-
         </div>
 
       </div>
 
-
       <div class="profile-stats">
 
         <div class="stat-box">
-
           <span
             class="stat-num"
             id="profile-stat-matches"
@@ -1241,16 +919,12 @@
             0
           </span>
 
-
           <span class="stat-label">
             Matches Played
           </span>
-
         </div>
 
-
         <div class="stat-box">
-
           <span
             class="stat-num"
             id="profile-stat-friends"
@@ -1258,20 +932,16 @@
             0
           </span>
 
-
           <span class="stat-label">
             Friends
           </span>
-
         </div>
 
       </div>
 
-
       <div class="profile-showcase-section">
 
         <div class="profile-showcase-header">
-
           <span>
             CHARACTER SHOWCASE
           </span>
@@ -1279,9 +949,7 @@
           <div
             id="profile-showcase-editor"
           ></div>
-
         </div>
-
 
         <div
           id="profile-showcase"
@@ -1290,19 +958,16 @@
 
       </div>
 
-
       <div
         id="showcase-picker"
         class="showcase-picker"
         style="display:none;"
       >
-
         <div class="showcase-picker-panel">
 
           <div class="showcase-picker-header">
 
             <div>
-
               <h3>
                 SHOWCASE CHARACTERS
               </h3>
@@ -1310,9 +975,7 @@
               <span>
                 Select up to 3
               </span>
-
             </div>
-
 
             <button
               class="close-btn"
@@ -1323,12 +986,10 @@
 
           </div>
 
-
           <div
             id="showcase-picker-list"
             class="showcase-picker-list"
           ></div>
-
 
           <button
             class="btn"
@@ -1338,18 +999,14 @@
           </button>
 
         </div>
-
       </div>
-
 
       <div
         id="profile-action-container"
       ></div>
 
     </div>
-
   </div>
-
 
   <!-- FRIENDS -->
 
@@ -1358,7 +1015,6 @@
     class="screen"
     style="display:none;"
   >
-
     <div class="modal-card friends-card">
 
       <button
@@ -1372,11 +1028,9 @@
         ✕
       </button>
 
-
       <h2>
         FRIENDS NETWORK
       </h2>
-
 
       <div class="tab-header">
 
@@ -1392,7 +1046,6 @@
           MY FRIENDS
         </button>
 
-
         <button
           class="tab-btn"
           id="tab-btn-search"
@@ -1404,7 +1057,6 @@
         >
           FIND FRIENDS
         </button>
-
 
         <button
           class="tab-btn"
@@ -1424,11 +1076,9 @@
           >
             0
           </span>
-
         </button>
 
       </div>
-
 
       <div
         id="tab-content-list"
@@ -1437,20 +1087,16 @@
           active
         "
       >
-
         <div
           id="friends-list"
           class="scroll-list"
         ></div>
-
       </div>
-
 
       <div
         id="tab-content-search"
         class="tab-content"
       >
-
         <div class="search-box">
 
           <input
@@ -1468,7 +1114,6 @@
             "
           >
 
-
           <button
             class="btn"
             style="
@@ -1483,31 +1128,121 @@
 
         </div>
 
-
         <div
           id="search-results-list"
           class="scroll-list"
         ></div>
-
       </div>
-
 
       <div
         id="tab-content-requests"
         class="tab-content"
       >
-
         <div
           id="requests-list"
           class="scroll-list"
         ></div>
-
       </div>
 
     </div>
-
   </div>
 
+  <!-- ================================================
+      DIRECT MESSAGES
+  ================================================= -->
+
+  <div
+    id="dm-chat-overlay"
+    class="chat-modal-overlay"
+    style="display:none;"
+  >
+    <div class="dm-chat-window">
+
+      <div class="dm-chat-header">
+
+        <div>
+          <div class="chat-title">
+            DIRECT MESSAGES
+          </div>
+
+          <div class="chat-subtitle">
+            Messages expire 24 hours after being read
+          </div>
+        </div>
+
+        <button
+          class="chat-close-btn"
+          onclick="closeLobbyChat()"
+        >
+          ✕
+        </button>
+
+      </div>
+
+      <div class="dm-chat-body">
+
+        <!-- FRIEND LIST -->
+
+        <div class="dm-friend-column">
+
+          <div class="dm-column-title">
+            FRIENDS
+          </div>
+
+          <div
+            id="dm-friend-list"
+            class="dm-friend-list"
+          ></div>
+
+        </div>
+
+        <!-- CONVERSATION -->
+
+        <div class="dm-conversation-column">
+
+          <div
+            id="dm-conversation-title"
+            class="dm-conversation-title"
+          >
+            SELECT A FRIEND
+          </div>
+
+          <div
+            id="dm-message-list"
+            class="chat-message-list"
+          >
+            <div class="chat-empty">
+              Select a friend to start chatting.
+            </div>
+          </div>
+
+          <div class="chat-input-row">
+
+            <input
+              id="dm-message-input"
+              class="chat-input"
+              maxlength="200"
+              autocomplete="off"
+              placeholder="Message a friend..."
+              disabled
+            >
+
+            <button
+              id="dm-send-btn"
+              class="chat-send-btn"
+              onclick="sendDirectMessage()"
+              disabled
+            >
+              SEND
+            </button>
+
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
 
   <!-- SQUAD LOBBY -->
 
@@ -1516,20 +1251,17 @@
     class="screen"
     style="display:none;"
   >
-
     <div
       class="
         lobby-header
         squad-header-row
       "
     >
-
       <div>
 
         <h1 id="squad-mode-title">
           SQUAD LOBBY
         </h1>
-
 
         <div
           id="squad-capacity"
@@ -1539,9 +1271,7 @@
         </div>
 
       </div>
-
     </div>
-
 
     <div
       class="
@@ -1554,7 +1284,6 @@
         class="team-slot"
         id="team-slot-1"
       >
-
         <div
           class="player-avatar"
           id="slot1-pfp"
@@ -1562,107 +1291,82 @@
           ?
         </div>
 
-
         <h3 id="slot1-name">
           Player
         </h3>
 
-
         <p id="slot1-role">
           PARTY LEADER
         </p>
-
       </div>
-
 
       <div
         class="team-slot"
         id="team-slot-2"
       >
-
         <div
           class="player-avatar"
           id="slot2-pfp"
         >
-
           <span class="plus-symbol">
             +
           </span>
-
         </div>
-
 
         <h3 id="slot2-name">
           EMPTY SLOT
         </h3>
 
-
         <p id="slot2-role">
           INVITE FRIEND
         </p>
-
       </div>
-
 
       <div
         class="team-slot"
         id="team-slot-3"
       >
-
         <div
           class="player-avatar"
           id="slot3-pfp"
         >
-
           <span class="plus-symbol">
             +
           </span>
-
         </div>
-
 
         <h3 id="slot3-name">
           EMPTY SLOT
         </h3>
 
-
         <p id="slot3-role">
           INVITE FRIEND
         </p>
-
       </div>
-
 
       <div
         class="team-slot"
         id="team-slot-4"
       >
-
         <div
           class="player-avatar"
           id="slot4-pfp"
         >
-
           <span class="plus-symbol">
             +
           </span>
-
         </div>
-
 
         <h3 id="slot4-name">
           EMPTY SLOT
         </h3>
 
-
         <p id="slot4-role">
           INVITE FRIEND
         </p>
-
       </div>
 
     </div>
-
 
     <aside class="squad-sidebar-panel">
 
@@ -1670,13 +1374,84 @@
         INVITE FRIENDS
       </h3>
 
-
       <div
         id="squad-friends-sidebar"
       ></div>
 
     </aside>
 
+    <!-- ==================================================
+         SQUAD CHAT
+    =================================================== -->
+
+    <div
+      id="squad-chat-panel"
+      class="squad-chat-panel"
+    >
+
+      <div
+        id="squad-chat-expanded"
+        class="squad-chat-expanded"
+      >
+
+        <div class="squad-chat-header">
+
+          <span>
+            SQUAD CHAT
+          </span>
+
+          <button
+            class="squad-chat-close"
+            type="button"
+            onclick="toggleSquadChat()"
+            aria-label="Close squad chat"
+          >
+            ✕
+          </button>
+
+        </div>
+
+        <div
+          id="squad-chat-messages"
+          class="squad-chat-messages"
+        ></div>
+
+        <div class="squad-chat-input-row">
+
+          <input
+            id="squad-chat-input"
+            class="squad-chat-input"
+            maxlength="200"
+            autocomplete="off"
+            placeholder="Message squad..."
+          >
+
+          <button
+            class="squad-chat-send"
+            type="button"
+            onclick="sendSquadChat()"
+          >
+            SEND
+          </button>
+
+        </div>
+
+      </div>
+
+      <button
+        id="squad-chat-toggle"
+        class="squad-chat-toggle"
+        type="button"
+        onclick="toggleSquadChat()"
+        aria-label="Open squad chat"
+        title="Squad chat"
+      >
+        <span aria-hidden="true">
+          💬
+        </span>
+      </button>
+
+    </div>
 
     <button
       class="
@@ -1690,7 +1465,6 @@
     >
       BACK TO LOBBY
     </button>
-
 
     <button
       class="
@@ -1707,7 +1481,6 @@
 
   </div>
 
-
   <!-- CHARACTER SELECT -->
 
   <div
@@ -1715,7 +1488,6 @@
     class="screen"
     style="display:none;"
   >
-
     <div
       class="
         lobby-header
@@ -1732,13 +1504,11 @@
           MODE
         </div>
 
-
         <h1>
           SELECT YOUR AGENT
         </h1>
 
       </div>
-
 
       <div
         class="
@@ -1750,7 +1520,6 @@
         <strong id="my-pick-display">
           You: Selecting...
         </strong>
-
 
         <div
           id="match-teammate-panel"
@@ -1765,13 +1534,11 @@
             |
           </span>
 
-
           <span id="teammate-pick-display">
             Teammate: Selecting...
           </span>
 
         </div>
-
 
         <span
           id="pvp-ready-counter"
@@ -1785,12 +1552,10 @@
 
     </div>
 
-
     <div
       id="selection-privacy-note"
       class="selection-note"
     ></div>
-
 
     <div
       class="
@@ -1809,14 +1574,11 @@
           )
         "
       >
-
         <img
           src="/assets/chengXiaoshi.jpg"
           alt="Cheng Xiaoshi"
         >
-
       </button>
-
 
       <button
         class="character-photo-card"
@@ -1828,14 +1590,11 @@
           )
         "
       >
-
         <img
           src="/assets/luGuang.jpg"
           alt="Lu Guang"
         >
-
       </button>
-
 
       <button
         class="character-photo-card"
@@ -1847,16 +1606,13 @@
           )
         "
       >
-
         <img
           src="/assets/qiaoLing.jpg"
           alt="Qiao Ling"
         >
-
       </button>
 
     </div>
-
 
     <div
       id="character-select-message"
@@ -1864,7 +1620,6 @@
     >
       Click a character to view their information.
     </div>
-
 
     <button
       class="
@@ -1880,13 +1635,11 @@
       READY
     </button>
 
-
     <div
       id="character-select-preview-overlay"
       class="character-select-preview-overlay"
       style="display:none;"
     >
-
       <div class="character-select-preview-panel">
 
         <div class="character-select-preview-top">
@@ -1900,7 +1653,6 @@
               ROLE
             </div>
 
-
             <h2
               id="character-preview-name"
               class="character-preview-name"
@@ -1909,7 +1661,6 @@
             </h2>
 
           </div>
-
 
           <button
             class="character-preview-x"
@@ -1922,7 +1673,6 @@
           </button>
 
         </div>
-
 
         <div class="character-preview-body">
 
@@ -1937,7 +1687,6 @@
 
           </div>
 
-
           <div class="character-preview-info">
 
             <div class="character-preview-proficiency">
@@ -1947,7 +1696,6 @@
                 class="character-preview-badge"
               ></div>
 
-
               <div>
 
                 <div
@@ -1956,7 +1704,6 @@
                 >
                   BRONZE
                 </div>
-
 
                 <div
                   id="character-preview-score"
@@ -1969,7 +1716,6 @@
 
             </div>
 
-
             <p
               id="character-preview-description"
               class="character-preview-description"
@@ -1978,7 +1724,6 @@
           </div>
 
         </div>
-
 
         <div class="character-preview-actions">
 
@@ -1996,7 +1741,6 @@
             CANCEL
           </button>
 
-
           <button
             class="
               btn
@@ -2013,11 +1757,9 @@
         </div>
 
       </div>
-
     </div>
 
   </div>
-
 
   <!-- ARENA HUD -->
 
@@ -2032,7 +1774,6 @@
         ROLE: UNASSIGNED
       </div>
 
-
       <div class="combat-health-row">
 
         HP
@@ -2043,14 +1784,12 @@
 
       </div>
 
-
       <div
         id="stun-status"
         class="combat-state-message"
       ></div>
 
     </div>
-
 
     <div class="combat-controls-hud">
 
@@ -2062,20 +1801,17 @@
             SPACE
           </div>
 
-
           <div class="ability-copy">
 
             <strong id="basic-name">
               PUNCH
             </strong>
 
-
             <span>
               Basic Attack
             </span>
 
           </div>
-
 
           <div
             class="ability-status"
@@ -2086,13 +1822,11 @@
 
         </div>
 
-
         <div class="ability-row">
 
           <div class="ability-key">
             Q
           </div>
-
 
           <div class="ability-copy">
 
@@ -2100,13 +1834,11 @@
               CONTROL
             </strong>
 
-
             <span>
               Ability
             </span>
 
           </div>
-
 
           <div
             class="ability-status"
@@ -2117,13 +1849,11 @@
 
         </div>
 
-
         <div class="ability-row">
 
           <div class="ability-key">
             E
           </div>
-
 
           <div class="ability-copy">
 
@@ -2131,13 +1861,11 @@
               STRENGTHEN
             </strong>
 
-
             <span>
               Ultimate
             </span>
 
           </div>
-
 
           <div
             class="ability-status"
@@ -2150,14 +1878,12 @@
 
       </div>
 
-
       <div
         id="instructions"
         class="arena-instructions"
       >
         WASD Move • SHIFT Camera • SPACE Punch • Q Control • E Strengthen
       </div>
-
 
       <div
         id="spectator-controls"
@@ -2169,18 +1895,15 @@
           SPECTATOR MODE
         </strong>
 
-
         <div id="spectator-target">
           SPECTATING
         </div>
-
 
         <span>
           A / ← Previous • D / → Next
         </span>
 
       </div>
-
 
       <button
         class="
@@ -2197,7 +1920,6 @@
 
     </div>
 
-
     <div
       id="match-result"
       class="match-result"
@@ -2205,37 +1927,73 @@
 
   </div>
 
+  <!-- ================================================
+      ARENA CHAT
+  ================================================= -->
+
+  <div
+    id="arena-chat-panel"
+    class="arena-chat-panel"
+    style="display:none;"
+  >
+
+    <div
+      id="arena-chat-messages"
+      class="arena-chat-messages"
+    ></div>
+
+    <div
+      id="arena-chat-input-row"
+      class="arena-chat-input-row"
+      style="display:none;"
+    >
+
+      <input
+        id="arena-chat-input"
+        class="chat-input arena-chat-input"
+        maxlength="200"
+        autocomplete="off"
+        placeholder="Message everyone..."
+      >
+
+    </div>
+
+    <div
+      id="arena-chat-hint"
+      class="arena-chat-hint"
+    >
+      ENTER TO CHAT
+    </div>
+
+  </div>
 
   <canvas
     id="game-canvas"
   ></canvas>
 
-
   <script
     src="/js/app.js"
   ></script>
-
 
   <script
     src="/js/social.js"
   ></script>
 
-
   <script
     src="/js/squad.js"
   ></script>
-
 
   <script
     src="/js/characterHub.js"
   ></script>
 
+  <script
+    src="/js/chat.js"
+  ></script>
 
   <script
     src="/js/arena.js"
   ></script>
 
-
 </body>
-
 </html>
