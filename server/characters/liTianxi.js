@@ -669,7 +669,7 @@ const LiTianxi = {
     manager.emitSelfState(
       socket.id
     );
-  }
+  },
 
 
   // ===================================================
