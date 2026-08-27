@@ -174,6 +174,63 @@ const CHARACTER_HUB_DATA = {
             'Qiao Ling rises 5.5 world units into the air for 1 second and can move normally while airborne. Non-tracking attacks cannot hit her. A filled red 5-unit-radius impact circle follows her position. She then crashes down for 350 AOE damage and a 1-second AOE stun. Cooldown: 25 seconds.'
         }
       }
+    },
+
+    li_tianxi: {
+
+      id:
+        'li_tianxi',
+    
+      name:
+        'LI TIANXI',
+    
+      role:
+        'MAGE',
+    
+      image:
+        '/assets/liTianxi.jpg',
+    
+      pvp: {
+    
+        hp:
+          650,
+    
+        basic: {
+    
+          key:
+            'SPACE',
+    
+          name:
+            'FLUFF BALLS',
+    
+          description:
+            'Fires a 7-damage Fluff Ball at an opponent within 12 world units. Fires 3 times every 2 seconds and travels at 40 world units per second. The Fluff Ball follows its original target until it hits, so it cannot be dodged through normal movement. Every third Fluff Ball marks its target. The attack count is remembered for 3 seconds; if Tianxi does not attack again within that time, the count resets to 0.'
+        },
+    
+        ability: {
+    
+          key:
+            'Q',
+    
+          name:
+            'MARK',
+    
+          description:
+            'Sends a 12-world-unit-wide rectangular wave forward at 30 world units per second for 1 second. Each opponent hit takes 60 AOE damage and is marked. An opponent who was already marked is also stunned for 1.5 seconds, and the mark remains. At the same time, Tianxi bursts backward at 40 world units per second for 0.5 seconds and becomes completely invincible. During those 0.5 seconds, new follow-until-hit attacks cannot target her. Cooldown: 10 seconds.'
+        },
+    
+        ultimate: {
+    
+          key:
+            'E',
+    
+          name:
+            'DAMAGE',
+    
+          description:
+            'No cooldown. If a marked opponent is within 20 world units, Tianxi selects the marked opponent closest to her facing direction and rapidly follows them until she reaches them, even if they move beyond 20 units after the cast. She then sticks to the target for 1.5 seconds, immobilising them while they remain able to attack and cast abilities in place. Tianxi automatically hits 8 times for 12 damage each. When the attack ends, that target’s mark is removed. Marks last a maximum of 5 seconds.'
+        }
+      }
     }
   };
   

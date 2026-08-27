@@ -558,6 +558,13 @@ function characterProfileImage(
     return '/assets/qiaoLing.jpg';
   }
 
+  if (
+    character ===
+    'li_tianxi'
+  ) {
+  
+    return '/assets/liTianxi.jpg';
+  }
 
   return '';
 }
@@ -799,6 +806,14 @@ function renderShowcasePicker() {
 
       image:
         '/assets/qiaoLing.jpg'
+    },
+
+    {
+      id:
+        'li_tianxi',
+    
+      image:
+        '/assets/liTianxi.jpg'
     }
   ];
 

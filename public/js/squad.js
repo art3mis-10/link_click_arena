@@ -998,6 +998,13 @@ function characterDisplayName(
     return 'Qiao Ling';
   }
 
+  if (
+    character ===
+    'li_tianxi'
+  ) {
+  
+    return 'Li Tianxi';
+  }
 
   return 'Selecting...';
 }
@@ -1080,6 +1087,28 @@ function characterSelectPreviewData(
           '550 HP assassin with high agility. Boxing chains a fist into a leg sweep, Mobility gives her a short high-speed burst, and Damage launches her airborne before a massive AOE axe kick.'
       };
     }
+
+
+    if (
+      character ===
+      'li_tianxi'
+    ) {
+    
+      return {
+    
+        name:
+          'LI TIANXI',
+    
+        role:
+          'MAGE',
+    
+        image:
+          '/assets/liTianxi.jpg',
+    
+        description:
+          '650 HP mage built around Marks. Fluff Balls builds a three-hit mark cycle, Mark sends a wide damaging wave while Tianxi bursts backward and becomes invincible, and Damage rushes a marked opponent and locks them in place for an eight-hit assault.'
+      };
+    }
   }
 
 
@@ -1147,6 +1176,28 @@ function characterSelectPreviewData(
       image:
         '/assets/qiaoLing.jpg',
 
+      description:
+        'Classic Match information will be added separately.'
+    };
+  }
+
+
+  if (
+    character ===
+    'li_tianxi'
+  ) {
+  
+    return {
+  
+      name:
+        'LI TIANXI',
+  
+      role:
+        'CLASSIC ROLE TBD',
+  
+      image:
+        '/assets/liTianxi.jpg',
+  
       description:
         'Classic Match information will be added separately.'
     };
@@ -1640,6 +1691,11 @@ function renderCharacterCards() {
     qiao_ling:
       document.getElementById(
         'card-qiao'
+      ),
+    
+    li_tianxi:
+      document.getElementById(
+        'card-tianxi'
       )
   };
 

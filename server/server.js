@@ -1,13 +1,10 @@
 const path =
   require('path');
 
-
 const crypto =
   require('crypto');
 
-
 require('dotenv').config({
-
   path:
     path.join(
       __dirname,
@@ -15,36 +12,29 @@ require('dotenv').config({
     )
 });
 
-
 const express =
   require('express');
-
 
 const mongoose =
   require('mongoose');
 
-
 const jwt =
   require('jsonwebtoken');
-
 
 const User =
   require('./User');
 
 const Message =
-  require('./Message')
+  require('./Message');
 
 const GameManager =
   require('./gameRoom');
 
-
 const CombatManager =
   require('./combatManager');
 
-
 const app =
   express();
-
 
 const http =
   require('http')
@@ -52,12 +42,10 @@ const http =
       app
     );
 
-
 const io =
   require('socket.io')(
     http
   );
-
 
 const gameManager =
   new GameManager();
@@ -66,6 +54,16 @@ const gameManager =
 // =====================================================
 // LIVE STATE
 // =====================================================
+
+/*
+  IMPORTANT:
+
+  Keep this map as:
+  username -> PRIMARY socket ID
+
+  combatManager and the rest of your
+  current multiplayer code expect this.
+*/
 
 const onlineUsers =
   new Map();
@@ -77,6 +75,299 @@ const activeSquads =
 
 const userSquadHosts =
   new Map();
+
+
+/*
+  Separate presence tracker:
+
+  username -> Set of ALL connected sockets
+
+  This fixes the bug where:
+
+  old socket disconnects
+  ↓
+  username gets deleted
+  ↓
+  newer/current socket is still alive
+  ↓
+  friend incorrectly appears OFFLINE
+*/
+
+const onlineUserSockets =
+  new Map();
+
+
+function addOnlineSocket(
+  username,
+  socketId
+) {
+
+  let socketIds =
+    onlineUserSockets.get(
+      username
+    );
+
+
+  if (
+    !socketIds
+  ) {
+
+    socketIds =
+      new Set();
+
+
+    onlineUserSockets.set(
+      username,
+      socketIds
+    );
+  }
+
+
+  socketIds.add(
+    socketId
+  );
+
+
+  /*
+    Latest authenticated connection becomes
+    the primary gameplay socket.
+  */
+
+  onlineUsers.set(
+    username,
+    socketId
+  );
+}
+
+
+function removeOnlineSocket(
+  username,
+  socketId
+) {
+
+  const socketIds =
+    onlineUserSockets.get(
+      username
+    );
+
+
+  if (
+    !socketIds
+  ) {
+
+    return;
+  }
+
+
+  socketIds.delete(
+    socketId
+  );
+
+
+  /*
+    No sockets remain:
+    genuinely offline.
+  */
+
+  if (
+    socketIds.size ===
+      0
+  ) {
+
+    onlineUserSockets.delete(
+      username
+    );
+
+
+    onlineUsers.delete(
+      username
+    );
+
+
+    return;
+  }
+
+
+  /*
+    If the socket that disconnected was the
+    primary socket, replace it with one of the
+    user's still-connected sockets.
+  */
+
+  if (
+    getPrimaryUserSocketId(
+      username
+    ) ===
+      socketId
+  ) {
+
+    const remainingSocketId =
+      Array
+        .from(
+          socketIds
+        )
+        .at(
+          -1
+        );
+
+
+    onlineUsers.set(
+      username,
+      remainingSocketId
+    );
+  }
+}
+
+
+function isUserOnline(
+  username
+) {
+
+  const socketIds =
+    onlineUserSockets.get(
+      username
+    );
+
+
+  return Boolean(
+
+    socketIds &&
+
+    socketIds.size >
+      0
+  );
+}
+
+
+function getPrimaryUserSocketId(
+  username
+) {
+
+  return (
+
+    onlineUsers.get(
+      username
+    ) ||
+
+    null
+  );
+}
+
+
+function emitToUser(
+  username,
+  eventName,
+  payload
+) {
+
+  const socketIds =
+    onlineUserSockets.get(
+      username
+    );
+
+
+  if (
+    !socketIds
+  ) {
+
+    return;
+  }
+
+
+  for (
+    const socketId
+    of socketIds
+  ) {
+
+    io
+      .to(
+        socketId
+      )
+      .emit(
+        eventName,
+        payload
+      );
+  }
+}
+
+
+// =====================================================
+// PRESENCE
+// =====================================================
+
+function getUserPresence(
+  username
+) {
+
+  if (
+    !isUserOnline(
+      username
+    )
+  ) {
+
+    return {
+
+      isOnline:
+        false,
+
+      isInGame:
+        false,
+
+      status:
+        'offline'
+    };
+  }
+
+
+  const squad =
+    getSquadForUser(
+      username
+    );
+
+
+  /*
+    Squad lobby:
+      ONLINE
+
+    Character selection:
+      ONLINE
+
+    Actual arena:
+      IN GAME
+  */
+
+  if (
+    squad &&
+    squad.phase ===
+      'arena'
+  ) {
+
+    return {
+
+      isOnline:
+        true,
+
+      isInGame:
+        true,
+
+      status:
+        'in_game'
+    };
+  }
+
+
+  return {
+
+    isOnline:
+      true,
+
+    isInGame:
+      false,
+
+    status:
+      'online'
+  };
+}
 
 
 // =====================================================
@@ -105,9 +396,9 @@ app.use(
 );
 
 
-/*
-  PUBLIC FILES
-*/
+// =====================================================
+// PUBLIC FILES
+// =====================================================
 
 app.use(
 
@@ -121,9 +412,9 @@ app.use(
 );
 
 
-/*
-  ROOT ASSETS FOLDER
-*/
+// =====================================================
+// ROOT ASSETS
+// =====================================================
 
 app.use(
 
@@ -196,15 +487,17 @@ function makeSoloSquad(
       {},
 
     /*
-      Snapshot of who actually
-      STARTED this round.
+      Snapshot of players who actually
+      entered the round.
     */
+
     roundRoster:
       [],
 
     /*
-      Stops accidental double-awards.
+      Prevent double stat awards.
     */
+
     roundStatsRecorded:
       false
   };
@@ -245,9 +538,11 @@ function getSquadForUser(
 
 
   return (
+
     activeSquads.get(
       hostUsername
     ) ||
+
     null
   );
 }
@@ -287,7 +582,10 @@ function validCharacter(
       'lu_guang' ||
 
     character ===
-      'qiao_ling'
+      'qiao_ling' ||
+
+    character ===
+      'li_tianxi'
   );
 }
 
@@ -356,7 +654,7 @@ async function userPublicData(
 
 
 // =====================================================
-// SERIALIZE CHARACTER MAP
+// SERIALIZE CHARACTER STATS
 // =====================================================
 
 function serializeCharacterStats(
@@ -435,19 +733,19 @@ function serializeCharacterStats(
         Number(
           stats.pvpMatches
         ) ||
-        0,
+          0,
 
       pvpWins:
         Number(
           stats.pvpWins
         ) ||
-        0,
+          0,
 
       proficiencyPoints:
         Number(
           stats.proficiencyPoints
         ) ||
-        0
+          0
     };
   }
 
@@ -586,7 +884,7 @@ async function recordPvpMatch(
 
 
   /*
-    SOLO TESTS ARE NOT COUNTED.
+    SOLO TESTS DO NOT COUNT.
   */
 
   if (
@@ -599,8 +897,8 @@ async function recordPvpMatch(
 
 
   /*
-    Mark BEFORE asynchronous writes so
-    duplicate finish calls cannot award twice.
+    Set BEFORE async DB writes so a duplicate
+    finish event cannot award stats twice.
   */
 
   squad.roundStatsRecorded =
@@ -766,11 +1064,6 @@ async function finishPvpRound(
   }
 
 
-  /*
-    CRITICAL:
-    Save BEFORE clearing selections.
-  */
-
   try {
 
     await recordPvpMatch(
@@ -852,7 +1145,7 @@ const combatManager =
 
 
 // =====================================================
-// LEAVE SQUAD
+// LEAVE CURRENT SQUAD
 // =====================================================
 
 async function leaveCurrentSquad(
@@ -877,7 +1170,7 @@ async function leaveCurrentSquad(
 
 
   const socketId =
-    onlineUsers.get(
+    getPrimaryUserSocketId(
       username
     );
 
@@ -887,6 +1180,12 @@ async function leaveCurrentSquad(
       squad
     );
 
+
+  /*
+    HOST LEAVES:
+    disband squad and give every remaining
+    member their own solo squad.
+  */
 
   if (
     squad.host ===
@@ -923,7 +1222,7 @@ async function leaveCurrentSquad(
 
 
       const memberSocketId =
-        onlineUsers.get(
+        getPrimaryUserSocketId(
           member
         );
 
@@ -971,6 +1270,10 @@ async function leaveCurrentSquad(
     return;
   }
 
+
+  /*
+    GUEST LEAVES
+  */
 
   squad.members =
     squad.members.filter(
@@ -1044,6 +1347,11 @@ async function leaveCurrentSquad(
     squad
   );
 
+
+  /*
+    If someone leaves during character
+    selection, refresh ready state.
+  */
 
   if (
     squad.phase ===
@@ -1133,7 +1441,7 @@ async function leaveCurrentSquad(
 
 
 // =====================================================
-// SPAWNS
+// SPAWN POSITIONS
 // =====================================================
 
 function getSpawnLayout(
@@ -1150,6 +1458,7 @@ function getSpawnLayout(
   ) {
 
     return [
+
       {
         x:
           0,
@@ -1307,7 +1616,7 @@ function startArenaForSquad(
           username,
 
           socketId:
-            onlineUsers.get(
+            getPrimaryUserSocketId(
               username
             )
         })
@@ -1370,11 +1679,8 @@ function startArenaForSquad(
 
 
   /*
-    CRITICAL PROFICIENCY SNAPSHOT.
-
-    We save this BEFORE selections are
-    ever reset and use only players who
-    actually made it into the arena.
+    Snapshot the actual arena roster BEFORE
+    any selection state can be cleared.
   */
 
   if (
@@ -1415,8 +1721,7 @@ function startArenaForSquad(
   /*
     Set phase BEFORE combat initialization.
 
-    This avoids any code observing a
-    half-started character-selection state.
+    Presence now immediately becomes IN GAME.
   */
 
   squad.phase =
@@ -1734,6 +2039,7 @@ app.post(
   }
 );
 
+
 // =====================================================
 // CHAT HELPERS
 // =====================================================
@@ -1779,10 +2085,6 @@ function cleanChatText(
   return text;
 }
 
-
-// =====================================================
-// FRIEND CHECK
-// =====================================================
 
 async function usersAreFriends(
   usernameA,
@@ -1846,10 +2148,6 @@ async function usersAreFriends(
 }
 
 
-// =====================================================
-// SERIALIZE DM
-// =====================================================
-
 function publicDirectMessage(
   message
 ) {
@@ -1881,6 +2179,7 @@ function publicDirectMessage(
       null
   };
 }
+
 
 // =====================================================
 // SOCKET.IO
@@ -1924,7 +2223,7 @@ io.on(
           data.name;
 
 
-        onlineUsers.set(
+        addOnlineSocket(
           authenticatedUser,
           socket.id
         );
@@ -2132,7 +2431,7 @@ io.on(
 
 
     // =================================================
-    // INVITE
+    // SEND SQUAD INVITE
     // =================================================
 
     socket.on(
@@ -2196,8 +2495,58 @@ io.on(
         }
 
 
+        const targetPresence =
+          getUserPresence(
+            targetUsername
+          );
+
+
+        if (
+          !targetPresence.isOnline
+        ) {
+
+          socket.emit(
+            'squad_error',
+            {
+
+              message:
+                'That friend is offline.'
+            }
+          );
+
+
+          return;
+        }
+
+
+        /*
+          Server-side enforcement.
+
+          Even if someone manually enables the
+          disabled browser button, an in-game
+          player still cannot receive the invite.
+        */
+
+        if (
+          targetPresence.isInGame
+        ) {
+
+          socket.emit(
+            'squad_error',
+            {
+
+              message:
+                'That friend is currently in a game.'
+            }
+          );
+
+
+          return;
+        }
+
+
         const recipientSocketId =
-          onlineUsers.get(
+          getPrimaryUserSocketId(
             targetUsername
           );
 
@@ -2254,7 +2603,7 @@ io.on(
 
 
     // =================================================
-    // ACCEPT INVITE
+    // ACCEPT SQUAD INVITE
     // =================================================
 
     socket.on(
@@ -2435,7 +2784,7 @@ io.on(
 
 
     // =================================================
-    // LEAVE
+    // LEAVE SQUAD
     // =================================================
 
     socket.on(
@@ -2458,772 +2807,6 @@ io.on(
         socket.emit(
           'left_squad'
         );
-      }
-    );
-
-        // =================================================
-    // DIRECT MESSAGE — OPEN CONVERSATION
-    // =================================================
-
-    socket.on(
-      'dm_open',
-
-      async (
-        {
-          friendUsername
-        },
-        callback
-      ) => {
-
-        try {
-
-          if (
-            !authenticatedUser ||
-            !friendUsername
-          ) {
-
-            if (
-              typeof callback ===
-              'function'
-            ) {
-
-              callback({
-
-                success:
-                  false,
-
-                message:
-                  'Invalid conversation.'
-              });
-            }
-
-
-            return;
-          }
-
-
-          const areFriends =
-            await usersAreFriends(
-
-              authenticatedUser,
-
-              friendUsername
-            );
-
-
-          if (
-            !areFriends
-          ) {
-
-            if (
-              typeof callback ===
-              'function'
-            ) {
-
-              callback({
-
-                success:
-                  false,
-
-                message:
-                  'You can only message friends.'
-              });
-            }
-
-
-            return;
-          }
-
-
-          /*
-            Remember which DM this socket
-            currently has OPEN.
-
-            This allows incoming messages to
-            count as immediately read only while
-            the conversation is actually open.
-          */
-
-          socket.data.activeDmPartner =
-            friendUsername;
-
-
-          // =============================================
-          // MARK THEIR UNREAD MESSAGES AS READ
-          // =============================================
-
-          const readAt =
-            new Date();
-
-
-          const expiresAt =
-            new Date(
-
-              readAt.getTime() +
-              DM_EXPIRY_MS
-            );
-
-
-          await Message.updateMany(
-
-            {
-
-              sender:
-                friendUsername,
-
-              recipient:
-                authenticatedUser,
-
-              readAt:
-                null
-            },
-
-            {
-
-              $set: {
-
-                readAt,
-
-                expiresAt
-              }
-            }
-          );
-
-
-          // =============================================
-          // LOAD LATEST 100 MESSAGES
-          // =============================================
-
-          let messages =
-            await Message
-              .find({
-
-                $or: [
-
-                  {
-
-                    sender:
-                      authenticatedUser,
-
-                    recipient:
-                      friendUsername
-                  },
-
-                  {
-
-                    sender:
-                      friendUsername,
-
-                    recipient:
-                      authenticatedUser
-                  }
-                ]
-              })
-              .sort({
-                createdAt:
-                  -1
-              })
-              .limit(
-                100
-              )
-              .lean();
-
-
-          messages =
-            messages.reverse();
-
-
-          if (
-            typeof callback ===
-            'function'
-          ) {
-
-            callback({
-
-              success:
-                true,
-
-              friendUsername,
-
-              messages:
-                messages.map(
-                  publicDirectMessage
-                )
-            });
-          }
-
-
-          /*
-            Optional real-time notification to
-            sender that messages were read.
-
-            We don't need visible read receipts
-            yet, but this keeps the protocol
-            ready for them.
-          */
-
-          const friendSocketId =
-            onlineUsers.get(
-              friendUsername
-            );
-
-
-          if (
-            friendSocketId
-          ) {
-
-            io
-              .to(
-                friendSocketId
-              )
-              .emit(
-                'dm_messages_read',
-                {
-
-                  by:
-                    authenticatedUser,
-
-                  readAt,
-
-                  expiresAt
-                }
-              );
-          }
-
-        } catch (error) {
-
-          console.error(
-            'DM open error:',
-            error
-          );
-
-
-          if (
-            typeof callback ===
-            'function'
-          ) {
-
-            callback({
-
-              success:
-                false,
-
-              message:
-                'Failed to open conversation.'
-            });
-          }
-        }
-      }
-    );
-
-
-    // =================================================
-    // DIRECT MESSAGE — CLOSE CONVERSATION
-    // =================================================
-
-    socket.on(
-      'dm_close',
-      ({
-        friendUsername
-      } = {}) => {
-
-        if (
-          !friendUsername ||
-          socket.data
-            .activeDmPartner ===
-            friendUsername
-        ) {
-
-          socket.data.activeDmPartner =
-            null;
-        }
-      }
-    );
-
-
-    // =================================================
-    // DIRECT MESSAGE — SEND
-    // =================================================
-
-    socket.on(
-      'dm_send',
-
-      async (
-        {
-          to,
-          text
-        },
-        callback
-      ) => {
-
-        try {
-
-          if (
-            !authenticatedUser ||
-            !to
-          ) {
-
-            if (
-              typeof callback ===
-              'function'
-            ) {
-
-              callback({
-
-                success:
-                  false,
-
-                message:
-                  'Invalid message.'
-              });
-            }
-
-
-            return;
-          }
-
-
-          const cleanedText =
-            cleanChatText(
-              text
-            );
-
-
-          if (
-            !cleanedText
-          ) {
-
-            if (
-              typeof callback ===
-              'function'
-            ) {
-
-              callback({
-
-                success:
-                  false,
-
-                message:
-                  'Message must be 1–200 characters.'
-              });
-            }
-
-
-            return;
-          }
-
-
-          const areFriends =
-            await usersAreFriends(
-
-              authenticatedUser,
-
-              to
-            );
-
-
-          if (
-            !areFriends
-          ) {
-
-            if (
-              typeof callback ===
-              'function'
-            ) {
-
-              callback({
-
-                success:
-                  false,
-
-                message:
-                  'You can only message friends.'
-              });
-            }
-
-
-            return;
-          }
-
-
-          // =============================================
-          // CHECK WHETHER RECIPIENT IS READING RIGHT NOW
-          // =============================================
-
-          const recipientSocketId =
-            onlineUsers.get(
-              to
-            );
-
-
-          const recipientSocket =
-            recipientSocketId
-
-              ? io
-                  .sockets
-                  .sockets
-                  .get(
-                    recipientSocketId
-                  )
-
-              : null;
-
-
-          const recipientReadingNow =
-
-            Boolean(
-              recipientSocket
-            ) &&
-
-            recipientSocket
-              .data
-              .activeDmPartner ===
-                authenticatedUser;
-
-
-          let readAt =
-            null;
-
-
-          let expiresAt =
-            null;
-
-
-          if (
-            recipientReadingNow
-          ) {
-
-            readAt =
-              new Date();
-
-
-            expiresAt =
-              new Date(
-
-                readAt.getTime() +
-                DM_EXPIRY_MS
-              );
-          }
-
-
-          // =============================================
-          // SAVE
-          // =============================================
-
-          const message =
-            await Message.create({
-
-              sender:
-                authenticatedUser,
-
-              recipient:
-                to,
-
-              text:
-                cleanedText,
-
-              readAt,
-
-              expiresAt
-            });
-
-
-          const payload =
-            publicDirectMessage(
-              message
-            );
-
-
-          // =============================================
-          // SEND TO ONLINE RECIPIENT
-          // =============================================
-
-          if (
-            recipientSocketId
-          ) {
-
-            io
-              .to(
-                recipientSocketId
-              )
-              .emit(
-                'dm_message',
-                payload
-              );
-          }
-
-
-          if (
-            typeof callback ===
-            'function'
-          ) {
-
-            callback({
-
-              success:
-                true,
-
-              message:
-                payload
-            });
-          }
-
-        } catch (error) {
-
-          console.error(
-            'DM send error:',
-            error
-          );
-
-
-          if (
-            typeof callback ===
-            'function'
-          ) {
-
-            callback({
-
-              success:
-                false,
-
-              message:
-                'Failed to send message.'
-            });
-          }
-        }
-      }
-    );
-
-
-    // =================================================
-    // SQUAD LOBBY CHAT
-    // =================================================
-
-    socket.on(
-      'squad_chat_send',
-
-      (
-        {
-          text
-        },
-        callback
-      ) => {
-
-        if (
-          !authenticatedUser
-        ) {
-
-          return;
-        }
-
-
-        const cleanedText =
-          cleanChatText(
-            text
-          );
-
-
-        if (
-          !cleanedText
-        ) {
-
-          if (
-            typeof callback ===
-            'function'
-          ) {
-
-            callback({
-
-              success:
-                false,
-
-              message:
-                'Message must be 1–200 characters.'
-            });
-          }
-
-
-          return;
-        }
-
-
-        const squad =
-          getSquadForUser(
-            authenticatedUser
-          );
-
-
-        if (
-          !squad ||
-          squad.phase !==
-            'lobby' ||
-          !squad.members.includes(
-            authenticatedUser
-          )
-        ) {
-
-          if (
-            typeof callback ===
-            'function'
-          ) {
-
-            callback({
-
-              success:
-                false,
-
-              message:
-                'Squad chat is only available in the squad lobby.'
-            });
-          }
-
-
-          return;
-        }
-
-
-        const payload = {
-
-          sender:
-            authenticatedUser,
-
-          text:
-            cleanedText,
-
-          sentAt:
-            new Date()
-        };
-
-
-        io
-          .to(
-            roomForSquad(
-              squad
-            )
-          )
-          .emit(
-            'squad_chat_message',
-            payload
-          );
-
-
-        if (
-          typeof callback ===
-          'function'
-        ) {
-
-          callback({
-            success:
-              true
-          });
-        }
-      }
-    );
-
-
-    // =================================================
-    // ARENA CHAT
-    // =================================================
-
-    socket.on(
-      'arena_chat_send',
-
-      (
-        {
-          text
-        },
-        callback
-      ) => {
-
-        if (
-          !authenticatedUser
-        ) {
-
-          return;
-        }
-
-
-        const cleanedText =
-          cleanChatText(
-            text
-          );
-
-
-        if (
-          !cleanedText
-        ) {
-
-          if (
-            typeof callback ===
-            'function'
-          ) {
-
-            callback({
-
-              success:
-                false,
-
-              message:
-                'Message must be 1–200 characters.'
-            });
-          }
-
-
-          return;
-        }
-
-
-        const squad =
-          getSquadForUser(
-            authenticatedUser
-          );
-
-
-        if (
-          !squad ||
-          squad.phase !==
-            'arena' ||
-          !squad.members.includes(
-            authenticatedUser
-          )
-        ) {
-
-          return;
-        }
-
-
-        io
-          .to(
-            roomForSquad(
-              squad
-            )
-          )
-          .emit(
-            'arena_chat_message',
-            {
-
-              sender:
-                authenticatedUser,
-
-              text:
-                cleanedText,
-
-              sentAt:
-                new Date()
-            }
-          );
-
-
-        if (
-          typeof callback ===
-            'function'
-        ) {
-
-          callback({
-            success:
-              true
-          });
-        }
       }
     );
 
@@ -3317,7 +2900,7 @@ io.on(
 
 
     // =================================================
-    // CHOOSE CHARACTER
+    // SELECT CHARACTER
     // =================================================
 
     socket.on(
@@ -3464,7 +3047,7 @@ io.on(
 
 
     // =================================================
-    // LOCK / READY
+    // READY CHARACTER
     // =================================================
 
     socket.on(
@@ -3643,7 +3226,7 @@ io.on(
 
 
     // =================================================
-    // MOVEMENT
+    // PLAYER MOVEMENT
     // =================================================
 
     socket.on(
@@ -3710,6 +3293,762 @@ io.on(
 
 
     // =================================================
+    // DIRECT MESSAGE — OPEN
+    // =================================================
+
+    socket.on(
+      'dm_open',
+      async (
+        {
+          friendUsername
+        },
+        callback
+      ) => {
+
+        try {
+
+          if (
+            !authenticatedUser ||
+            !friendUsername
+          ) {
+
+            if (
+              typeof callback ===
+                'function'
+            ) {
+
+              callback({
+
+                success:
+                  false,
+
+                message:
+                  'Invalid conversation.'
+              });
+            }
+
+
+            return;
+          }
+
+
+          const areFriends =
+            await usersAreFriends(
+
+              authenticatedUser,
+
+              friendUsername
+            );
+
+
+          if (
+            !areFriends
+          ) {
+
+            if (
+              typeof callback ===
+                'function'
+            ) {
+
+              callback({
+
+                success:
+                  false,
+
+                message:
+                  'You can only message friends.'
+              });
+            }
+
+
+            return;
+          }
+
+
+          /*
+            This socket currently has this
+            conversation open.
+          */
+
+          socket.data.activeDmPartner =
+            friendUsername;
+
+
+          const readAt =
+            new Date();
+
+
+          const expiresAt =
+            new Date(
+
+              readAt.getTime() +
+              DM_EXPIRY_MS
+            );
+
+
+          /*
+            The recipient has now read all
+            unread messages from this friend.
+
+            Start the 24-hour deletion timer.
+          */
+
+          await Message.updateMany(
+
+            {
+
+              sender:
+                friendUsername,
+
+              recipient:
+                authenticatedUser,
+
+              readAt:
+                null
+            },
+
+            {
+
+              $set: {
+
+                readAt,
+
+                expiresAt
+              }
+            }
+          );
+
+
+          /*
+            Load latest 100 messages.
+          */
+
+          let messages =
+            await Message
+              .find({
+
+                $or: [
+
+                  {
+
+                    sender:
+                      authenticatedUser,
+
+                    recipient:
+                      friendUsername
+                  },
+
+                  {
+
+                    sender:
+                      friendUsername,
+
+                    recipient:
+                      authenticatedUser
+                  }
+                ]
+              })
+              .sort({
+                createdAt:
+                  -1
+              })
+              .limit(
+                100
+              )
+              .lean();
+
+
+          messages =
+            messages.reverse();
+
+
+          if (
+            typeof callback ===
+              'function'
+          ) {
+
+            callback({
+
+              success:
+                true,
+
+              friendUsername,
+
+              messages:
+                messages.map(
+                  publicDirectMessage
+                )
+            });
+          }
+
+
+          /*
+            Notify sender that their messages
+            were read. No visible read receipt
+            is required yet.
+          */
+
+          emitToUser(
+
+            friendUsername,
+
+            'dm_messages_read',
+
+            {
+
+              by:
+                authenticatedUser,
+
+              readAt,
+
+              expiresAt
+            }
+          );
+
+        } catch (error) {
+
+          console.error(
+            'DM open error:',
+            error
+          );
+
+
+          if (
+            typeof callback ===
+              'function'
+          ) {
+
+            callback({
+
+              success:
+                false,
+
+              message:
+                'Failed to open conversation.'
+            });
+          }
+        }
+      }
+    );
+
+
+    // =================================================
+    // DIRECT MESSAGE — CLOSE
+    // =================================================
+
+    socket.on(
+      'dm_close',
+      ({
+        friendUsername
+      } = {}) => {
+
+        if (
+          !friendUsername ||
+          socket.data
+            .activeDmPartner ===
+            friendUsername
+        ) {
+
+          socket.data.activeDmPartner =
+            null;
+        }
+      }
+    );
+
+
+    // =================================================
+    // DIRECT MESSAGE — SEND
+    // =================================================
+
+    socket.on(
+      'dm_send',
+      async (
+        {
+          to,
+          text
+        },
+        callback
+      ) => {
+
+        try {
+
+          if (
+            !authenticatedUser ||
+            !to
+          ) {
+
+            if (
+              typeof callback ===
+                'function'
+            ) {
+
+              callback({
+
+                success:
+                  false,
+
+                message:
+                  'Invalid message.'
+              });
+            }
+
+
+            return;
+          }
+
+
+          const cleanedText =
+            cleanChatText(
+              text
+            );
+
+
+          if (
+            !cleanedText
+          ) {
+
+            if (
+              typeof callback ===
+                'function'
+            ) {
+
+              callback({
+
+                success:
+                  false,
+
+                message:
+                  'Message must be 1–200 characters.'
+              });
+            }
+
+
+            return;
+          }
+
+
+          const areFriends =
+            await usersAreFriends(
+
+              authenticatedUser,
+
+              to
+            );
+
+
+          if (
+            !areFriends
+          ) {
+
+            if (
+              typeof callback ===
+                'function'
+            ) {
+
+              callback({
+
+                success:
+                  false,
+
+                message:
+                  'You can only message friends.'
+              });
+            }
+
+
+            return;
+          }
+
+
+          /*
+            Check every live recipient socket.
+
+            If ANY of them currently has this
+            conversation open, the new message
+            counts as immediately read.
+          */
+
+          const recipientSocketIds =
+            onlineUserSockets.get(
+              to
+            );
+
+
+          let recipientReadingNow =
+            false;
+
+
+          if (
+            recipientSocketIds
+          ) {
+
+            for (
+              const recipientSocketId
+              of recipientSocketIds
+            ) {
+
+              const recipientSocket =
+                io
+                  .sockets
+                  .sockets
+                  .get(
+                    recipientSocketId
+                  );
+
+
+              if (
+                recipientSocket &&
+                recipientSocket
+                  .data
+                  .activeDmPartner ===
+                  authenticatedUser
+              ) {
+
+                recipientReadingNow =
+                  true;
+
+
+                break;
+              }
+            }
+          }
+
+
+          let readAt =
+            null;
+
+
+          let expiresAt =
+            null;
+
+
+          if (
+            recipientReadingNow
+          ) {
+
+            readAt =
+              new Date();
+
+
+            expiresAt =
+              new Date(
+
+                readAt.getTime() +
+                DM_EXPIRY_MS
+              );
+          }
+
+
+          const message =
+            await Message.create({
+
+              sender:
+                authenticatedUser,
+
+              recipient:
+                to,
+
+              text:
+                cleanedText,
+
+              readAt,
+
+              expiresAt
+            });
+
+
+          const payload =
+            publicDirectMessage(
+              message
+            );
+
+
+          /*
+            Send the real-time DM to every
+            active socket for the recipient.
+          */
+
+          emitToUser(
+
+            to,
+
+            'dm_message',
+
+            payload
+          );
+
+
+          if (
+            typeof callback ===
+              'function'
+          ) {
+
+            callback({
+
+              success:
+                true,
+
+              message:
+                payload
+            });
+          }
+
+        } catch (error) {
+
+          console.error(
+            'DM send error:',
+            error
+          );
+
+
+          if (
+            typeof callback ===
+              'function'
+          ) {
+
+            callback({
+
+              success:
+                false,
+
+              message:
+                'Failed to send message.'
+            });
+          }
+        }
+      }
+    );
+
+
+    // =================================================
+    // SQUAD CHAT
+    // =================================================
+
+    socket.on(
+      'squad_chat_send',
+      (
+        {
+          text
+        },
+        callback
+      ) => {
+
+        if (
+          !authenticatedUser
+        ) {
+
+          return;
+        }
+
+
+        const cleanedText =
+          cleanChatText(
+            text
+          );
+
+
+        if (
+          !cleanedText
+        ) {
+
+          if (
+            typeof callback ===
+              'function'
+          ) {
+
+            callback({
+
+              success:
+                false,
+
+              message:
+                'Message must be 1–200 characters.'
+            });
+          }
+
+
+          return;
+        }
+
+
+        const squad =
+          getSquadForUser(
+            authenticatedUser
+          );
+
+
+        if (
+          !squad ||
+          squad.phase !==
+            'lobby' ||
+          !squad.members.includes(
+            authenticatedUser
+          )
+        ) {
+
+          if (
+            typeof callback ===
+              'function'
+          ) {
+
+            callback({
+
+              success:
+                false,
+
+              message:
+                'Squad chat is only available in the squad lobby.'
+            });
+          }
+
+
+          return;
+        }
+
+
+        io
+          .to(
+            roomForSquad(
+              squad
+            )
+          )
+          .emit(
+            'squad_chat_message',
+            {
+
+              sender:
+                authenticatedUser,
+
+              text:
+                cleanedText,
+
+              sentAt:
+                new Date()
+            }
+          );
+
+
+        if (
+          typeof callback ===
+            'function'
+        ) {
+
+          callback({
+            success:
+              true
+          });
+        }
+      }
+    );
+
+
+    // =================================================
+    // ARENA CHAT
+    // =================================================
+
+    socket.on(
+      'arena_chat_send',
+      (
+        {
+          text
+        },
+        callback
+      ) => {
+
+        if (
+          !authenticatedUser
+        ) {
+
+          return;
+        }
+
+
+        const cleanedText =
+          cleanChatText(
+            text
+          );
+
+
+        if (
+          !cleanedText
+        ) {
+
+          if (
+            typeof callback ===
+              'function'
+          ) {
+
+            callback({
+
+              success:
+                false,
+
+              message:
+                'Message must be 1–200 characters.'
+            });
+          }
+
+
+          return;
+        }
+
+
+        const squad =
+          getSquadForUser(
+            authenticatedUser
+          );
+
+
+        if (
+          !squad ||
+          squad.phase !==
+            'arena' ||
+          !squad.members.includes(
+            authenticatedUser
+          )
+        ) {
+
+          return;
+        }
+
+
+        io
+          .to(
+            roomForSquad(
+              squad
+            )
+          )
+          .emit(
+            'arena_chat_message',
+            {
+
+              sender:
+                authenticatedUser,
+
+              text:
+                cleanedText,
+
+              sentAt:
+                new Date()
+            }
+          );
+
+
+        if (
+          typeof callback ===
+            'function'
+        ) {
+
+          callback({
+            success:
+              true
+          });
+        }
+      }
+    );
+
+
+    // =================================================
     // DISCONNECT
     // =================================================
 
@@ -3744,25 +4083,42 @@ io.on(
             : null;
 
 
-        onlineUsers.delete(
-          authenticatedUser
-        );
+        /*
+          Remove ONLY this socket.
 
+          Do not mark the whole username offline
+          unless there are truly zero live sockets.
+        */
 
-        await leaveCurrentSquad(
+        removeOnlineSocket(
 
           authenticatedUser,
 
-          {
-            disconnecting:
-              true
-          }
+          socket.id
         );
 
 
-        userSquadHosts.delete(
-          authenticatedUser
-        );
+        if (
+          !isUserOnline(
+            authenticatedUser
+          )
+        ) {
+
+          await leaveCurrentSquad(
+
+            authenticatedUser,
+
+            {
+              disconnecting:
+                true
+            }
+          );
+
+
+          userSquadHosts.delete(
+            authenticatedUser
+          );
+        }
 
 
         gameManager.removePlayer(
@@ -3787,12 +4143,16 @@ io.on(
     );
 
 
+    // =================================================
+    // REAL-TIME FRIEND REQUEST
+    // =================================================
+
     socket.on(
       'send_friend_request',
       data => {
 
         const targetSocketId =
-          onlineUsers.get(
+          getPrimaryUserSocketId(
             data.to
           );
 
@@ -3903,6 +4263,12 @@ app.get(
       }
 
 
+      const presence =
+        getUserPresence(
+          user.username
+        );
+
+
       res.json({
 
         username:
@@ -3924,9 +4290,13 @@ app.get(
             : 0,
 
         isOnline:
-          onlineUsers.has(
-            user.username
-          ),
+          presence.isOnline,
+
+        isInGame:
+          presence.isInGame,
+
+        status:
+          presence.status,
 
         isFriend,
 
@@ -3934,10 +4304,6 @@ app.get(
           user.showcasedCharacters ||
           [],
 
-        /*
-          THIS WAS MISSING FROM THE
-          SERVER YOU UPLOADED.
-        */
         characterStats:
           serializeCharacterStats(
             user.characterStats
@@ -4260,10 +4626,9 @@ app.get(
                 friend.avatar ||
                 '',
 
-              isOnline:
-                onlineUsers.has(
-                  friend.username
-                )
+              ...getUserPresence(
+                friend.username
+              )
             })
           )
       );
@@ -4469,6 +4834,7 @@ app.post(
       const alreadyFriends =
         senderUser.friends.some(
           id =>
+
             id.toString() ===
             targetUser._id.toString()
         );
@@ -4530,7 +4896,7 @@ app.post(
 
 
 // =====================================================
-// REQUEST LIST
+// FRIEND REQUEST LIST
 // =====================================================
 
 app.get(
@@ -4605,7 +4971,7 @@ app.get(
 
 
 // =====================================================
-// REQUEST RESPONSE
+// FRIEND REQUEST RESPONSE
 // =====================================================
 
 app.post(

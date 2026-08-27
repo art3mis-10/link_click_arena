@@ -206,6 +206,38 @@ class GameManager {
       actionLockedUntil:
         0,
 
+      // LI TIANXI / MOVEMENT-ONLY CONTROL
+      immobilizedUntil:
+        0,
+
+      immobilizedBy:
+        null,
+
+      // FULL INVULNERABILITY
+      invincibleUntil:
+        0,
+
+      untargetableUntil:
+        0,
+
+      // LI TIANXI BASIC CHAIN
+      tianxiBasicCount:
+        0,
+
+      tianxiBasicExpiresAt:
+        0,
+
+      // LI TIANXI MARKS PLACED ON THIS PLAYER
+      tianxiMarks:
+        {},
+
+      // LI TIANXI Q
+      tianxiBackburstUntil:
+        0,
+
+      // LI TIANXI E
+      tianxiUltActive:
+        false,
       // CHENG
       speedBuffUntil:
         0,

@@ -162,20 +162,28 @@ function openFriendsScreen() {
                     class="
                       status-badge
                       ${
-                        friend.isOnline
-                          ? ''
-                          : 'offline'
+                        friend.isInGame
+                          ? 'in-game'
+                  
+                          : friend.isOnline
+                            ? ''
+                  
+                            : 'offline'
                       }
                       mini-status
                     "
                   >
                     ${
-                      friend.isOnline
-                        ? 'ONLINE'
-                        : 'OFFLINE'
+                      friend.isInGame
+                        ? 'IN GAME'
+                  
+                        : friend.isOnline
+                          ? 'ONLINE'
+                  
+                          : 'OFFLINE'
                     }
                   </span>
-  
+
                 </div>
   
               </div>

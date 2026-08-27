@@ -19,6 +19,10 @@ const QiaoLing =
     './characters/qiaoLing'
   );
 
+const LiTianxi =
+require(
+  './characters/liTianxi'
+);
 
 class CombatManager {
   constructor({
@@ -48,14 +52,18 @@ class CombatManager {
       onRoundEnd;
 
     this.characters = {
+
       cheng_xiaoshi:
         ChengXiaoshi,
-
+    
       lu_guang:
         LuGuang,
-
+    
       qiao_ling:
-        QiaoLing
+        QiaoLing,
+    
+      li_tianxi:
+        LiTianxi
     };
 
     this.projectiles =
@@ -571,7 +579,40 @@ class CombatManager {
             combat.shieldMaxHp,
 
           shieldUntil:
-            combat.shieldUntil
+            combat.shieldUntil,
+          
+          immobilizedUntil:
+            combat.immobilizedUntil ||
+            0,
+          
+          invincibleUntil:
+            combat.invincibleUntil ||
+            0,
+          
+          untargetableUntil:
+            combat.untargetableUntil ||
+            0,
+          
+          tianxiBackburstUntil:
+            combat.tianxiBackburstUntil ||
+            0,
+          
+          tianxiBasicCount:
+            combat.tianxiBasicCount ||
+            0,
+          
+          tianxiBasicExpiresAt:
+            combat.tianxiBasicExpiresAt ||
+            0,
+          
+            tianxiUltActive:
+            Boolean(
+              combat.tianxiUltActive
+            ),
+          
+          immobilizedBy:
+            combat.immobilizedBy ||
+            null,
         }
       );
   }
@@ -655,6 +696,13 @@ class CombatManager {
       Number(
         data.z
       );
+    
+    const immobilized =
+      now <
+      (
+        combat.immobilizedUntil ||
+        0
+      );
 
     if (
       !Number.isFinite(
@@ -695,12 +743,16 @@ class CombatManager {
       0.45;
 
     let dx =
-      requestedX -
-      player.x;
-
+      immobilized
+        ? 0
+        : requestedX -
+          player.x;
+    
     let dz =
-      requestedZ -
-      player.z;
+      immobilized
+        ? 0
+        : requestedZ -
+          player.z;
 
     const distance =
       Math.hypot(
@@ -814,6 +866,61 @@ class CombatManager {
         (
           player.combat
             .airborneUntil ||
+          0
+        )
+    );
+  }
+
+  // =====================================================
+  // FULL INVULNERABILITY
+  // =====================================================
+
+  isFullyInvulnerable(
+    player,
+    now =
+      Date.now()
+  ) {
+
+    return (
+
+      Boolean(
+        player &&
+        player.combat &&
+        player.combat.alive
+      ) &&
+
+      now <
+        (
+          player.combat
+            .invincibleUntil ||
+          0
+        )
+    );
+  }
+
+
+  // =====================================================
+  // FOLLOW-UNTIL-HIT TARGETABILITY
+  // =====================================================
+
+  isTargetableForTracking(
+    player,
+    now =
+      Date.now()
+  ) {
+
+    return (
+
+      Boolean(
+        player &&
+        player.combat &&
+        player.combat.alive
+      ) &&
+
+      now >=
+        (
+          player.combat
+            .untargetableUntil ||
           0
         )
     );
@@ -959,68 +1066,103 @@ class CombatManager {
   findNearestTarget(
     squad,
     attacker,
-    range
+    range,
+    {
+      requireTargetable =
+        false
+    } = {}
   ) {
+  
+    const now =
+      Date.now();
+  
+  
     let closest =
       null;
-
+  
+  
     let closestDistance =
       Infinity;
-
+  
+  
     for (
       const username
       of squad.members
     ) {
+  
       const socketId =
         this.onlineUsers.get(
           username
         );
-
+  
+  
       if (
         !socketId ||
         socketId ===
           attacker.id
       ) {
+  
         continue;
       }
-
+  
+  
       const target =
         this.gameManager
           .getPlayer(
             socketId
           );
-
+  
+  
       if (
         !target ||
         !target.combat ||
         !target.combat.alive
       ) {
+  
         continue;
       }
-
+  
+  
+      if (
+        requireTargetable &&
+        !this.isTargetableForTracking(
+          target,
+          now
+        )
+      ) {
+  
+        continue;
+      }
+  
+  
       const distance =
         Math.hypot(
+  
           target.x -
             attacker.x,
-
+  
           target.z -
             attacker.z
         );
-
+  
+  
       if (
         distance <=
           range &&
         distance <
           closestDistance
       ) {
+  
         closest =
           target;
-
+  
+  
         closestDistance =
           distance;
       }
     }
-
+  
+  
     return closest;
   }
 
@@ -1114,6 +1256,10 @@ class CombatManager {
             Boolean(
               projectile.strengthened
             ),
+          appliesMark:
+            Boolean(
+              projectile.appliesMark
+            ),
 
           spawnedAt:
             projectile.spawnedAt
@@ -1147,6 +1293,15 @@ class CombatManager {
     const now =
       Date.now();
 
+    if (
+      this.isFullyInvulnerable(
+        target,
+        now
+      )
+    ) {
+    
+      return false;
+    }
     /*
       Qiao Ling DAMAGE:
       airborne avoids every
@@ -1300,6 +1455,15 @@ class CombatManager {
     const now =
       Date.now();
 
+    if (
+      this.isFullyInvulnerable(
+        target,
+        now
+      )
+    ) {
+    
+      return;
+    }
     target.combat
       .stunnedUntil =
         Math.max(
@@ -1336,6 +1500,265 @@ class CombatManager {
     );
   }
 
+  // =====================================================
+  // LI TIANXI MARK
+  // =====================================================
+
+  addTianxiMark(
+    squad,
+    sourcePlayer,
+    target,
+    durationMs =
+      5000
+  ) {
+
+    if (
+      !sourcePlayer ||
+      !target ||
+      !target.combat ||
+      !target.combat.alive
+    ) {
+
+      return;
+    }
+
+
+    if (
+      !target.combat.tianxiMarks
+    ) {
+
+      target.combat.tianxiMarks =
+        {};
+    }
+
+
+    const now =
+      Date.now();
+
+
+    const expiresAt =
+      now +
+      durationMs;
+
+
+    target.combat.tianxiMarks[
+      sourcePlayer.id
+    ] =
+      expiresAt;
+
+
+    this.io
+      .to(
+        this.roomForSquad(
+          squad
+        )
+      )
+      .emit(
+        'combat_tianxi_mark',
+        {
+
+          sourceId:
+            sourcePlayer.id,
+
+          targetId:
+            target.id,
+
+          expiresAt,
+
+          serverNow:
+            now
+        }
+      );
+
+
+    /*
+      Clear exactly this application
+      after 5 seconds unless it was
+      refreshed in the meantime.
+    */
+
+    setTimeout(
+      () => {
+
+        if (
+          !target.combat ||
+          !target.combat.tianxiMarks
+        ) {
+
+          return;
+        }
+
+
+        if (
+          target.combat.tianxiMarks[
+            sourcePlayer.id
+          ] !==
+            expiresAt
+        ) {
+
+          return;
+        }
+
+
+        delete target.combat.tianxiMarks[
+          sourcePlayer.id
+        ];
+
+
+        this.io
+          .to(
+            this.roomForSquad(
+              squad
+            )
+          )
+          .emit(
+            'combat_tianxi_mark_cleared',
+            {
+
+              sourceId:
+                sourcePlayer.id,
+
+              targetId:
+                target.id,
+
+              serverNow:
+                Date.now()
+            }
+          );
+
+      },
+      durationMs +
+      25
+    );
+  }
+
+
+  hasTianxiMark(
+    sourcePlayer,
+    target,
+    now =
+      Date.now()
+  ) {
+
+    if (
+      !sourcePlayer ||
+      !target ||
+      !target.combat ||
+      !target.combat.tianxiMarks
+    ) {
+
+      return false;
+    }
+
+
+    return (
+
+      Number(
+
+        target.combat.tianxiMarks[
+          sourcePlayer.id
+        ]
+
+      ) ||
+      0
+
+    ) >
+      now;
+  }
+
+
+  clearTianxiMark(
+    squad,
+    sourcePlayer,
+    target
+  ) {
+
+    if (
+      !sourcePlayer ||
+      !target ||
+      !target.combat ||
+      !target.combat.tianxiMarks
+    ) {
+
+      return;
+    }
+
+
+    if (
+      !target.combat.tianxiMarks[
+        sourcePlayer.id
+      ]
+    ) {
+
+      return;
+    }
+
+
+    delete target.combat.tianxiMarks[
+      sourcePlayer.id
+    ];
+
+
+    this.io
+      .to(
+        this.roomForSquad(
+          squad
+        )
+      )
+      .emit(
+        'combat_tianxi_mark_cleared',
+        {
+
+          sourceId:
+            sourcePlayer.id,
+
+          targetId:
+            target.id,
+
+          serverNow:
+            Date.now()
+        }
+      );
+  }
+
+
+  // =====================================================
+  // FORCED SERVER MOVEMENT
+  // =====================================================
+
+  emitForcedPosition(
+    squad,
+    player
+  ) {
+
+    this.io
+      .to(
+        this.roomForSquad(
+          squad
+        )
+      )
+      .emit(
+        'combat_forced_position',
+        {
+
+          playerId:
+            player.id,
+
+          x:
+            player.x,
+
+          z:
+            player.z,
+
+          rotation:
+            player.rotation ||
+            0,
+
+          serverNow:
+            Date.now()
+        }
+      );
+  }
 
   // =====================================================
   // PROJECTILE HIT
@@ -1369,6 +1792,18 @@ class CombatManager {
           projectile,
           target
         );
+    }
+
+    if (
+      projectile.kind ===
+        'tianxi_fluff'
+    ) {
+    
+      LiTianxi.projectileHit(
+        this,
+        projectile,
+        target
+      );
     }
   }
 
