@@ -605,7 +605,7 @@ class CombatManager {
             combat.tianxiBasicExpiresAt ||
             0,
           
-            tianxiUltActive:
+          tianxiUltActive:
             Boolean(
               combat.tianxiUltActive
             ),
@@ -655,10 +655,6 @@ class CombatManager {
     const now =
       Date.now();
 
-    /*
-      Stun and basic attack both
-      temporarily prohibit movement.
-    */
     if (
       !combat.alive ||
       now <
@@ -871,6 +867,7 @@ class CombatManager {
     );
   }
 
+
   // =====================================================
   // FULL INVULNERABILITY
   // =====================================================
@@ -989,9 +986,6 @@ class CombatManager {
         continue;
       }
 
-      /*
-        Melee is non-tracking.
-      */
       if (
         this.isNonTrackingInvulnerable(
           target,
@@ -1076,14 +1070,11 @@ class CombatManager {
     const now =
       Date.now();
   
-  
     let closest =
       null;
   
-  
     let closestDistance =
       Infinity;
-  
   
     for (
       const username
@@ -1095,7 +1086,6 @@ class CombatManager {
           username
         );
   
-  
       if (
         !socketId ||
         socketId ===
@@ -1105,13 +1095,11 @@ class CombatManager {
         continue;
       }
   
-  
       const target =
         this.gameManager
           .getPlayer(
             socketId
           );
-  
   
       if (
         !target ||
@@ -1121,7 +1109,6 @@ class CombatManager {
   
         continue;
       }
-  
   
       if (
         requireTargetable &&
@@ -1134,7 +1121,6 @@ class CombatManager {
         continue;
       }
   
-  
       const distance =
         Math.hypot(
   
@@ -1144,7 +1130,6 @@ class CombatManager {
           target.z -
             attacker.z
         );
-  
   
       if (
         distance <=
@@ -1156,12 +1141,10 @@ class CombatManager {
         closest =
           target;
   
-  
         closestDistance =
           distance;
       }
     }
-  
   
     return closest;
   }
@@ -1256,6 +1239,7 @@ class CombatManager {
             Boolean(
               projectile.strengthened
             ),
+
           appliesMark:
             Boolean(
               projectile.appliesMark
@@ -1302,11 +1286,7 @@ class CombatManager {
     
       return false;
     }
-    /*
-      Qiao Ling DAMAGE:
-      airborne avoids every
-      non-tracking attack.
-    */
+
     if (
       !tracking &&
       this.isNonTrackingInvulnerable(
@@ -1464,6 +1444,7 @@ class CombatManager {
     
       return;
     }
+
     target.combat
       .stunnedUntil =
         Math.max(
@@ -1499,6 +1480,7 @@ class CombatManager {
       target.id
     );
   }
+
 
   // =====================================================
   // LI TIANXI MARK
@@ -1570,12 +1552,6 @@ class CombatManager {
         }
       );
 
-
-    /*
-      Clear exactly this application
-      after 5 seconds unless it was
-      refreshed in the meantime.
-    */
 
     setTimeout(
       () => {
@@ -1759,6 +1735,7 @@ class CombatManager {
         }
       );
   }
+
 
   // =====================================================
   // PROJECTILE HIT
@@ -2029,6 +2006,68 @@ class CombatManager {
 
 
   // =====================================================
+  // SWEPT PROJECTILE COLLISION
+  //
+  // Fast projectiles can travel several units between
+  // server ticks. Checking only the final position allows
+  // Lu Guang's lasers to jump completely through players.
+  // =====================================================
+
+  distancePointToSegment(
+    px,
+    pz,
+    ax,
+    az,
+    bx,
+    bz
+  ) {
+    const abx =
+      bx - ax;
+
+    const abz =
+      bz - az;
+
+    const lengthSquared =
+      abx * abx +
+      abz * abz;
+
+    if (
+      lengthSquared <=
+      0
+    ) {
+      return Math.hypot(
+        px - ax,
+        pz - az
+      );
+    }
+
+    const t =
+      Math.max(
+        0,
+        Math.min(
+          1,
+          (
+            (px - ax) * abx +
+            (pz - az) * abz
+          ) /
+          lengthSquared
+        )
+      );
+
+    const closestX =
+      ax + abx * t;
+
+    const closestZ =
+      az + abz * t;
+
+    return Math.hypot(
+      px - closestX,
+      pz - closestZ
+    );
+  }
+
+
+  // =====================================================
   // MAIN TICK
   // =====================================================
 
@@ -2084,6 +2123,11 @@ class CombatManager {
         continue;
       }
 
+
+      // ===============================================
+      // HOMING DIRECTION
+      // ===============================================
+
       if (
         projectile.homing &&
         projectile.targetId
@@ -2136,6 +2180,7 @@ class CombatManager {
         }
       }
 
+
       const dt =
         Math.max(
           0,
@@ -2152,19 +2197,92 @@ class CombatManager {
       projectile.lastTickAt =
         now;
 
-      projectile.x +=
-        projectile.direction.x *
+
+      /*
+        Save the old position.
+
+        Collision will be checked against
+        the FULL segment from previous
+        position to new position.
+      */
+
+      const previousX =
+        projectile.x;
+
+      const previousZ =
+        projectile.z;
+
+
+      let movementDistance =
         projectile.speed *
         dt;
 
+
+      /*
+        IMPORTANT FIX FOR LU ULT:
+
+        Homing lasers are extremely fast.
+
+        If we move farther than the remaining
+        distance to the target, the projectile
+        overshoots, reverses next tick, then
+        overshoots again.
+
+        Visually this looks like lasers stuck
+        inside the opponent.
+
+        Clamp the movement so the projectile
+        cannot move past its target.
+      */
+
+      if (
+        projectile.homing &&
+        projectile.targetId
+      ) {
+        const target =
+          this.gameManager
+            .getPlayer(
+              projectile.targetId
+            );
+
+        if (
+          target
+        ) {
+          const targetDistance =
+            Math.hypot(
+              target.x -
+                projectile.x,
+
+              target.z -
+                projectile.z
+            );
+
+          movementDistance =
+            Math.min(
+              movementDistance,
+              targetDistance
+            );
+        }
+      }
+
+
+      projectile.x +=
+        projectile.direction.x *
+        movementDistance;
+
       projectile.z +=
         projectile.direction.z *
-        projectile.speed *
-        dt;
+        movementDistance;
+
 
       const lifetime =
         now -
         projectile.spawnedAt;
+
+
+      // ===============================================
+      // NORMAL PROJECTILE MAX RANGE
+      // ===============================================
 
       if (
         !projectile.homing
@@ -2190,6 +2308,11 @@ class CombatManager {
         }
       }
 
+
+      // ===============================================
+      // PROJECTILE LIFETIME
+      // ===============================================
+
       if (
         lifetime >=
         projectile.maxLifetime
@@ -2201,8 +2324,14 @@ class CombatManager {
         continue;
       }
 
+
+      // ===============================================
+      // COLLISION
+      // ===============================================
+
       let hitTarget =
         null;
+
 
       for (
         const username
@@ -2214,6 +2343,7 @@ class CombatManager {
             username
           );
 
+
         if (
           !socketId ||
           socketId ===
@@ -2222,11 +2352,13 @@ class CombatManager {
           continue;
         }
 
+
         const target =
           this.gameManager
             .getPlayer(
               socketId
             );
+
 
         if (
           !target ||
@@ -2235,6 +2367,12 @@ class CombatManager {
         ) {
           continue;
         }
+
+
+        /*
+          Homing Lu lasers can only hit
+          their original locked target.
+        */
 
         if (
           projectile.homing &&
@@ -2245,10 +2383,12 @@ class CombatManager {
           continue;
         }
 
+
         /*
-          Non-tracking projectiles simply
-          pass underneath airborne Qiao.
+          Non-tracking projectiles pass
+          underneath airborne Qiao.
         */
+
         if (
           !projectile.tracking &&
           this.isNonTrackingInvulnerable(
@@ -2259,14 +2399,43 @@ class CombatManager {
           continue;
         }
 
-        const distance =
-          Math.hypot(
-            target.x -
-              projectile.x,
 
-            target.z -
-              projectile.z
+        /*
+          IMPORTANT FIX:
+
+          Do NOT compare the target only to
+          projectile.x / projectile.z.
+
+          Lu's laser travels ~4 units every
+          50ms server tick at speed 80.
+
+          Therefore it can move:
+
+              before target
+                  ↓
+              [tick]
+                  ↓
+              after target
+
+          without ever ending a tick inside
+          the target's hit radius.
+
+          Measure distance to the ENTIRE
+          path traveled during this tick.
+        */
+
+        const distance =
+          this.distancePointToSegment(
+            target.x,
+            target.z,
+
+            previousX,
+            previousZ,
+
+            projectile.x,
+            projectile.z
           );
+
 
         if (
           distance <=
@@ -2280,9 +2449,17 @@ class CombatManager {
         }
       }
 
-      if (!hitTarget) {
+
+      if (
+        !hitTarget
+      ) {
         continue;
       }
+
+
+      // ===============================================
+      // HIT EVENT
+      // ===============================================
 
       this.io
         .to(
@@ -2313,9 +2490,17 @@ class CombatManager {
           }
         );
 
+
+      /*
+        Delete BEFORE applying the character
+        hit logic so this projectile can never
+        damage twice.
+      */
+
       this.projectiles.delete(
         id
       );
+
 
       this.handleProjectileHit(
         projectile,
@@ -2326,7 +2511,7 @@ class CombatManager {
 
 
   // =====================================================
-  // REGEN
+  // HEALTH REGEN
   // =====================================================
 
   updateHealthRegen(
@@ -2463,7 +2648,9 @@ class CombatManager {
           player.name
         );
 
-      if (squad) {
+      if (
+        squad
+      ) {
         this.io
           .to(
             this.roomForSquad(

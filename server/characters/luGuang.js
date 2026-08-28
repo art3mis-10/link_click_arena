@@ -45,29 +45,21 @@ const LuGuang = {
 
 
     /*
-      IMPORTANT:
+      Calculate strengthened BEFORE finding a target.
 
-      Calculate strengthened BEFORE finding
-      a target because strengthened Lasers
-      obey Tianxi's temporary untargetable
-      state.
+      Strengthened lasers use tracking/homing behavior.
     */
 
     const strengthened =
-
       now <
       combat.strengthenUntil;
 
 
     const target =
       manager.findNearestTarget(
-
         squad,
-
         player,
-
         15,
-
         {
           requireTargetable:
             strengthened
@@ -77,7 +69,7 @@ const LuGuang = {
 
     /*
       No target:
-      no Laser,
+      no projectile,
       no cooldown,
       no movement lock.
     */
@@ -88,24 +80,6 @@ const LuGuang = {
 
       return;
     }
-
-
-    combat.basicReadyAt =
-      now + 250;
-
-
-    manager.lockBasicMovement(
-      squad,
-      player,
-      90
-    );
-
-
-    const damage =
-
-      strengthened
-        ? 30
-        : 25;
 
 
     const dx =
@@ -132,6 +106,28 @@ const LuGuang = {
 
       return;
     }
+
+
+    /*
+      Only consume the attack once we have
+      a valid target and direction.
+    */
+
+    combat.basicReadyAt =
+      now + 250;
+
+
+    manager.lockBasicMovement(
+      squad,
+      player,
+      90
+    );
+
+
+    const damage =
+      strengthened
+        ? 30
+        : 25;
 
 
     const direction = {
@@ -185,12 +181,13 @@ const LuGuang = {
 
       damage,
 
+
       /*
         Normal Laser:
-        flies straight.
+        straight projectile.
 
         Strengthened Laser:
-        follows original target.
+        tracks the original target.
       */
 
       homing:
@@ -201,20 +198,20 @@ const LuGuang = {
 
       strengthened,
 
+
       /*
-        Strengthened Laser follows until:
-        - it hits
-        - target dies
-        - owner dies
-        - round ends
+        Normal lasers only need about
+        1 second at this speed/range.
+
+        Strengthened lasers get slightly
+        more time, but no longer live
+        effectively forever if something
+        goes wrong.
       */
 
       maxLifetime:
-
         strengthened
-
-          ? Number.MAX_SAFE_INTEGER
-
+          ? 1500
           : 1000
     });
 
@@ -402,15 +399,10 @@ const LuGuang = {
 
     const hit =
       manager.applyDamage(
-
         projectile.squad,
-
         target,
-
         projectile.damage,
-
         projectile.ownerId,
-
         {
           tracking:
             Boolean(
@@ -430,9 +422,8 @@ const LuGuang = {
 
     /*
       Strengthened Laser:
-
-      independent 33% chance
-      to stun for 0.5 sec.
+      independent 33% chance to stun
+      for 0.5 seconds.
     */
 
     if (
@@ -444,11 +435,8 @@ const LuGuang = {
     ) {
 
       manager.applyStun(
-
         projectile.squad,
-
         target,
-
         500
       );
     }
