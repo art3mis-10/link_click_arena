@@ -1340,12 +1340,6 @@ function stopArenaChatTyping(
     );
 
 
-  const canvas =
-    document.getElementById(
-      'game-canvas'
-    );
-
-
   arenaChatTyping =
     false;
 
@@ -1381,32 +1375,14 @@ function stopArenaChatTyping(
 
 
   /*
-    If the player had Shift-lock before
-    opening chat, restore it.
+    DO NOT automatically request pointer lock here.
+
+    Browser pointer lock requires a direct
+    user gesture.
+
+    The player can press SHIFT once after
+    closing/sending chat to restore Shift-lock.
   */
-
-  if (
-    restorePointerLock &&
-    arenaChatHadPointerLock &&
-    canvas &&
-    typeof canvas.requestPointerLock ===
-      'function'
-  ) {
-
-    try {
-
-      canvas.requestPointerLock();
-
-    } catch (error) {
-
-      /*
-        Some browsers may decline pointer-lock
-        restoration. The player can press Shift
-        again normally.
-      */
-    }
-  }
-
 
   arenaChatHadPointerLock =
     false;
