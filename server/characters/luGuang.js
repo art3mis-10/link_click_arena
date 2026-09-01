@@ -126,8 +126,8 @@ const LuGuang = {
 
     const damage =
       strengthened
-        ? 30
-        : 25;
+        ? 20
+        : 15;
 
 
     const direction = {

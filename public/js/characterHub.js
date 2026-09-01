@@ -90,7 +90,7 @@ const CHARACTER_HUB_DATA = {
             'LASER',
   
           description:
-            'Automatically fires at the closest living opponent within 15 world units. Deals 25 damage, fires four times per second, and travels at 80 world units per second. Normal Lasers do not home after being fired.'
+            'Automatically fires at the closest living opponent within 15 world units. Deals 15 damage, fires four times per second, and travels at 80 world units per second. Normal Lasers do not home after being fired.'
         },
   
         ability: {
@@ -114,7 +114,7 @@ const CHARACTER_HUB_DATA = {
             'STRENGTHEN',
   
           description:
-            'For 5 seconds, Lu Guang gains +20% movement speed. Lasers deal 30 damage and become homing attacks. Each strengthened Laser independently has a 33% chance to stun for 0.5 seconds. Cooldown: 35 seconds.'
+            'For 5 seconds, Lu Guang gains +20% movement speed. Lasers deal 20 damage and become homing attacks. Each strengthened Laser independently has a 33% chance to stun for 0.5 seconds. Cooldown: 35 seconds.'
         }
       }
     },
